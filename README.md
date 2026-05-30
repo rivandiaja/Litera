@@ -44,6 +44,36 @@ Rencana audit dan implementasi lengkap ada di:
 docs/IMPLEMENTATION_PLAN.md
 ```
 
+## Backend API
+
+Backend tahap awal berada di folder:
+
+```text
+backend/
+```
+
+Backend menggunakan FastAPI, SQLAlchemy, SQLite, Alembic, PyJWT, dan `pwdlib[argon2]`. Pada tahap saat ini backend menyediakan health check, register, login, `/auth/me`, migration, model database fondasi, dan seed data demo. Frontend belum dihubungkan ke backend.
+
+Setup singkat:
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+Copy-Item .env.example .env
+alembic upgrade head
+python -m app.services.seed
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Dokumentasi backend lengkap ada di:
+
+```text
+backend/README.md
+```
+
 ## Rencana Tahap Berikutnya
 
-Tahap berikutnya adalah membuat backend REST API menggunakan FastAPI, SQLite, dan SQLAlchemy, lalu mengimplementasikan upload PDF, ekstraksi teks, preprocessing Bahasa Indonesia, custom inverted index, dan ranking TF-IDF sesuai PRD.
+Tahap berikutnya adalah CRUD bidang penelitian dan koleksi melalui REST API, lalu integrasi frontend secara bertahap tanpa mengubah desain.

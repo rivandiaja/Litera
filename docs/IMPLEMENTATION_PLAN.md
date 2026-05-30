@@ -572,3 +572,47 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ## 17. Pertanyaan Terbuka
 
 Tidak ada pertanyaan produk yang menghalangi tahap 1 dan tahap 2. Keputusan detail backend dapat dikunci saat mulai tahap 3.
+
+## 18. Progress Tahap 3
+
+Status: selesai untuk backend scaffold, database foundation, Alembic migration, seed data, dan JWT authentication.
+
+Yang sudah dibuat:
+
+- Folder `backend/` dengan FastAPI app modular.
+- SQLAlchemy 2-style ORM untuk seluruh tabel fondasi PRD: users, research fields, research projects, documents, document pages, document stats, index terms, index postings, dan search histories.
+- Alembic initial migration sebagai sumber pembuatan database development.
+- Pydantic Settings dan `.env.example`.
+- Password hashing Argon2 melalui `pwdlib[argon2]`.
+- JWT access token dengan PyJWT.
+- Endpoint `GET /api/v1/health`, `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, dan `GET /api/v1/auth/me`.
+- Dependency `get_db`, `get_current_user`, `get_current_active_user`, dan `require_admin` untuk tahap berikutnya.
+- Seed data idempotent berisi akun admin demo, 2 mahasiswa demo, 6 bidang penelitian, dan 2 koleksi demo.
+- Test backend untuk health, authentication, migration/model relationship, unique constraint, cascade sederhana, dan Argon2 hash.
+
+Yang sengaja belum dibuat:
+
+- CRUD bidang/koleksi melalui API.
+- Upload PDF.
+- Ekstraksi teks PDF.
+- Preprocessing, inverted index runtime, TF-IDF, dan search endpoint.
+- Integrasi frontend ke backend.
+
+Perintah verifikasi tahap 3:
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+alembic upgrade head
+python -m app.services.seed
+pytest
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Endpoint verifikasi:
+
+- `http://127.0.0.1:8000/api/v1/health`
+- `http://127.0.0.1:8000/docs`
