@@ -1,6 +1,6 @@
 # Litera Backend
 
-Backend Litera adalah REST API FastAPI untuk fondasi autentikasi, database, migration, dan seed data MVP. Tahap ini belum mencakup upload PDF, indexing, inverted index runtime, TF-IDF, atau search endpoint.
+Backend Litera adalah REST API FastAPI untuk fondasi autentikasi, database, migration, seed data MVP, CRUD bidang penelitian, dan CRUD koleksi penelitian. Tahap ini belum mencakup upload PDF, indexing, inverted index runtime, TF-IDF, search endpoint, atau integrasi frontend.
 
 ## Prerequisite
 
@@ -61,7 +61,7 @@ Password berikut hanya untuk demo lokal dan dokumentasi tugas.
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | admin@litera.local | AdminDemo123! |
+| Admin | admin@litera.ac.id | AdminDemo123! |
 | Mahasiswa | arif@mahasiswa.ac.id | StudentDemo123! |
 | Mahasiswa | siti@mahasiswa.ac.id | StudentDemo123! |
 
@@ -71,10 +71,29 @@ Password berikut hanya untuk demo lokal dan dokumentasi tugas.
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
 - `GET /api/v1/auth/me`
+- `GET /api/v1/fields`
+- `GET /api/v1/fields/{field_id}`
+- `POST /api/v1/fields` admin
+- `PATCH /api/v1/fields/{field_id}` admin
+- `DELETE /api/v1/fields/{field_id}` admin, ditolak jika masih dipakai koleksi
+- `GET /api/v1/projects`
+- `GET /api/v1/projects/me`
+- `GET /api/v1/projects/{project_id}`
+- `POST /api/v1/projects`
+- `PATCH /api/v1/projects/{project_id}` owner/admin
+- `DELETE /api/v1/projects/{project_id}` owner/admin
+
+## Aturan Akses Tahap 4
+
+- Semua endpoint `fields` dan `projects` membutuhkan JWT.
+- Mahasiswa hanya melihat bidang penelitian aktif.
+- Admin dapat memakai `include_inactive=true` pada daftar bidang.
+- Bidang nonaktif tidak dapat dipakai untuk membuat atau memindahkan koleksi.
+- Koleksi `private` hanya dapat dibaca oleh owner dan admin; untuk mahasiswa lain dikembalikan sebagai `404`.
+- Koleksi dapat diubah atau dihapus oleh owner atau admin.
 
 ## Belum Dibuat pada Tahap Ini
 
-- CRUD bidang penelitian dan koleksi melalui API publik.
 - Upload PDF.
 - Ekstraksi teks PDF.
 - Preprocessing Bahasa Indonesia.

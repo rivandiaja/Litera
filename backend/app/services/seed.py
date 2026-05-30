@@ -21,7 +21,8 @@ USERS = [
     {
         "name": "Administrator Litera",
         "student_number": "ADM001",
-        "email": "admin@litera.local",
+        "email": "admin@litera.ac.id",
+        "legacy_emails": ["admin@litera.local"],
         "password": DEMO_ADMIN_PASSWORD,
         "study_program": "Administrasi Sistem",
         "class_name": "Admin",
@@ -51,6 +52,40 @@ USERS = [
 def _get_or_create_user(db: Session, user_data: dict) -> User:
     user = db.scalar(select(User).where(User.email == user_data["email"]))
     if user is not None:
+        user.name = user_data["name"]
+        user.student_number = user_data["student_number"]
+        user.password_hash = get_password_hash(user_data["password"])
+        user.study_program = user_data["study_program"]
+        user.class_name = user_data["class_name"]
+        user.role = user_data["role"]
+        user.is_active = True
+        db.flush()
+        return user
+
+    for legacy_email in user_data.get("legacy_emails", []):
+        user = db.scalar(select(User).where(User.email == legacy_email))
+        if user is not None:
+            user.name = user_data["name"]
+            user.student_number = user_data["student_number"]
+            user.email = user_data["email"]
+            user.password_hash = get_password_hash(user_data["password"])
+            user.study_program = user_data["study_program"]
+            user.class_name = user_data["class_name"]
+            user.role = user_data["role"]
+            user.is_active = True
+            db.flush()
+            return user
+
+    user = db.scalar(select(User).where(User.student_number == user_data["student_number"]))
+    if user is not None:
+        user.name = user_data["name"]
+        user.email = user_data["email"]
+        user.password_hash = get_password_hash(user_data["password"])
+        user.study_program = user_data["study_program"]
+        user.class_name = user_data["class_name"]
+        user.role = user_data["role"]
+        user.is_active = True
+        db.flush()
         return user
 
     user = User(
@@ -86,6 +121,7 @@ def _get_or_create_project(
     title: str,
     description: str,
     keywords: list[str],
+    visibility: ProjectVisibility,
 ) -> ResearchProject:
     project = db.scalar(
         select(ResearchProject).where(
@@ -94,6 +130,10 @@ def _get_or_create_project(
         )
     )
     if project is not None:
+        project.research_field = research_field
+        project.description = description
+        project.keywords = keywords
+        project.visibility = visibility
         return project
 
     project = ResearchProject(
@@ -102,7 +142,7 @@ def _get_or_create_project(
         title=title,
         description=description,
         keywords=keywords,
-        visibility=ProjectVisibility.PUBLIC,
+        visibility=visibility,
     )
     db.add(project)
     db.flush()
@@ -124,6 +164,7 @@ def seed_database() -> None:
             "Perancangan Network Monitoring System Terintegrasi untuk Monitoring OLT dan PPPoE",
             "Koleksi literatur untuk penelitian monitoring OLT, PPPoE, SNMP, GPON, dan FTTH.",
             ["SNMP", "OLT", "ONU", "PPPoE", "MikroTik", "FTTH"],
+            ProjectVisibility.PUBLIC,
         )
         _get_or_create_project(
             db,
@@ -132,6 +173,7 @@ def seed_database() -> None:
             "Implementasi Deep Learning untuk Deteksi Objek Real-Time pada Sistem Keamanan",
             "Koleksi referensi untuk deteksi objek real-time menggunakan model deep learning.",
             ["YOLO", "Object Detection", "CNN", "Real-time"],
+            ProjectVisibility.PRIVATE,
         )
         db.commit()
 

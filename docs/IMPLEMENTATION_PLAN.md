@@ -290,54 +290,54 @@ erDiagram
 
 Authentication:
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/me`
-- `POST /api/auth/logout` atau client-side token clear untuk MVP
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/logout` atau client-side token clear untuk MVP
 
 Research fields:
 
-- `GET /api/fields`
-- `GET /api/fields/{field_id}`
-- `POST /api/fields` admin
-- `PATCH /api/fields/{field_id}` admin
-- `DELETE /api/fields/{field_id}` admin, ditolak jika masih dipakai koleksi aktif
+- `GET /api/v1/fields`
+- `GET /api/v1/fields/{field_id}`
+- `POST /api/v1/fields` admin
+- `PATCH /api/v1/fields/{field_id}` admin
+- `DELETE /api/v1/fields/{field_id}` admin, ditolak jika masih dipakai koleksi aktif
 
 Research projects / collections:
 
-- `GET /api/projects`
-- `GET /api/projects/my`
-- `GET /api/projects/{project_id}`
-- `POST /api/projects`
-- `PATCH /api/projects/{project_id}` owner/admin
-- `DELETE /api/projects/{project_id}` owner/admin
+- `GET /api/v1/projects`
+- `GET /api/v1/projects/me`
+- `GET /api/v1/projects/{project_id}`
+- `POST /api/v1/projects`
+- `PATCH /api/v1/projects/{project_id}` owner/admin
+- `DELETE /api/v1/projects/{project_id}` owner/admin
 
 Documents:
 
-- `GET /api/documents`
-- `GET /api/documents/my`
-- `GET /api/projects/{project_id}/documents`
-- `POST /api/projects/{project_id}/documents` multipart multiple PDF
-- `GET /api/documents/{document_id}`
-- `PATCH /api/documents/{document_id}` owner/admin
-- `DELETE /api/documents/{document_id}` owner/admin
-- `POST /api/documents/{document_id}/reindex` owner/admin
-- `GET /api/documents/{document_id}/file`
+- `GET /api/v1/documents`
+- `GET /api/v1/documents/my`
+- `GET /api/v1/projects/{project_id}/documents`
+- `POST /api/v1/projects/{project_id}/documents` multipart multiple PDF
+- `GET /api/v1/documents/{document_id}`
+- `PATCH /api/v1/documents/{document_id}` owner/admin
+- `DELETE /api/v1/documents/{document_id}` owner/admin
+- `POST /api/v1/documents/{document_id}/reindex` owner/admin
+- `GET /api/v1/documents/{document_id}/file`
 
 Search:
 
-- `GET /api/search?query=&field_id=&project_id=&owner_id=&year_from=&year_to=&status=&sort=`
-- `GET /api/search/suggestions?query=`
-- `GET /api/search/history`
+- `GET /api/v1/search?query=&field_id=&project_id=&owner_id=&year_from=&year_to=&status=&sort=`
+- `GET /api/v1/search/suggestions?query=`
+- `GET /api/v1/search/history`
 
 Admin:
 
-- `GET /api/admin/users`
-- `PATCH /api/admin/users/{user_id}`
-- `GET /api/admin/projects`
-- `GET /api/admin/documents`
-- `GET /api/admin/indexing`
-- `POST /api/admin/indexing/reindex`
+- `GET /api/v1/admin/users`
+- `PATCH /api/v1/admin/users/{user_id}`
+- `GET /api/v1/admin/projects`
+- `GET /api/v1/admin/documents`
+- `GET /api/v1/admin/indexing`
+- `POST /api/v1/admin/indexing/reindex`
 
 ## 10. Alur Automatic PDF Indexing
 
@@ -480,13 +480,13 @@ Acceptance criteria:
 Pekerjaan:
 
 - Implement field admin CRUD dan project CRUD owner/admin.
-- Integrasikan halaman bidang, dashboard, dan create collection ke API tanpa redesign.
+- Pertahankan frontend mock tanpa integrasi API pada tahap ini.
 
 Acceptance criteria:
 
 - Field dan koleksi tersimpan di SQLite.
 - Permission owner/admin berjalan.
-- UI tetap konsisten.
+- Tidak ada backend upload, indexing, search endpoint, atau perubahan visual.
 
 ### Tahap 5 - Upload dan indexing PDF
 
@@ -616,3 +616,32 @@ Endpoint verifikasi:
 
 - `http://127.0.0.1:8000/api/v1/health`
 - `http://127.0.0.1:8000/docs`
+
+## 19. Progress Tahap 4
+
+Status: selesai untuk CRUD REST API bidang penelitian dan koleksi penelitian beserta authorization owner/admin.
+
+Yang sudah dibuat:
+
+- Endpoint `/api/v1/fields` untuk daftar, detail, create, update, dan delete bidang penelitian.
+- Endpoint `/api/v1/projects` untuk daftar, daftar milik pengguna aktif, detail, create, update, dan delete koleksi penelitian.
+- Schema Pydantic untuk pagination, field, project, owner summary, dan field summary.
+- Service layer ringan untuk slug field, validasi field aktif, pagination, visibility project, dan aturan owner/admin.
+- Seed data idempotent diperbarui agar satu koleksi demo tetap public dan satu koleksi demo private.
+- Test backend untuk field CRUD admin-only, field inactive, project creation, project visibility, owner/admin update/delete, `/projects/me`, dan idempotensi seed.
+
+Aturan akses tahap 4:
+
+- Semua endpoint field dan project membutuhkan JWT.
+- Mahasiswa hanya melihat bidang aktif.
+- Admin dapat memakai `include_inactive=true` untuk daftar bidang.
+- Bidang inactive tidak dapat dipakai saat create/update koleksi baru.
+- Project private disembunyikan sebagai `404` dari mahasiswa non-owner.
+- Project dapat diubah/dihapus oleh owner atau admin.
+
+Yang sengaja belum dibuat:
+
+- Integrasi frontend ke backend.
+- Upload PDF.
+- Ekstraksi PDF, preprocessing, inverted index runtime, TF-IDF, dan search endpoint.
+- Perubahan schema database baru; model awal sudah mencukupi, sehingga tidak ada migration kosong.
