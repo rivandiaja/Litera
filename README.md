@@ -2,7 +2,7 @@
 
 Litera adalah prototype frontend untuk literature search engine pengelolaan referensi penelitian mahasiswa. Repository ini berasal dari export ZIP desain Figma Make, sehingga desain visual, layout, typography, warna, dan komponen UI perlu dipertahankan semaksimal mungkin.
 
-Status saat ini: frontend prototype dengan mock data, ditambah backend FastAPI untuk auth, database, CRUD bidang penelitian, CRUD koleksi penelitian, upload PDF, ekstraksi teks, preprocessing Bahasa Indonesia, dan custom inverted index. Frontend belum dihubungkan ke backend, sehingga pengalaman visual di browser masih menggunakan mock data export Figma Make.
+Status saat ini: frontend prototype dengan mock data, ditambah backend FastAPI untuk auth, database, CRUD bidang penelitian, CRUD koleksi penelitian, upload PDF, ekstraksi teks, preprocessing Bahasa Indonesia, custom inverted index, dan search engine TF-IDF. Frontend belum dihubungkan ke backend, sehingga pengalaman visual di browser masih menggunakan mock data export Figma Make.
 
 ## Prerequisite
 
@@ -52,7 +52,7 @@ Backend tahap awal berada di folder:
 backend/
 ```
 
-Backend menggunakan FastAPI, SQLAlchemy, SQLite, Alembic, PyJWT, `pwdlib[argon2]`, PyMuPDF, Sastrawi, dan `python-multipart`. Pada tahap saat ini backend menyediakan health check, register, login, `/auth/me`, migration, seed data demo, CRUD bidang/koleksi, CRUD dokumen PDF, multiple upload, BackgroundTasks indexing, dan inverted index eksplisit. Frontend belum dihubungkan ke backend.
+Backend menggunakan FastAPI, SQLAlchemy, SQLite, Alembic, PyJWT, `pwdlib[argon2]`, PyMuPDF, Sastrawi, dan `python-multipart`. Pada tahap saat ini backend menyediakan health check, register, login, `/auth/me`, migration, seed data demo, CRUD bidang/koleksi, CRUD dokumen PDF, multiple upload, BackgroundTasks indexing, inverted index eksplisit, global search TF-IDF, catalog search, dan search history. Frontend belum dihubungkan ke backend.
 
 Setup singkat:
 
@@ -76,4 +76,4 @@ backend/README.md
 
 ## Rencana Tahap Berikutnya
 
-Tahap berikutnya adalah endpoint pencarian TF-IDF global/per bidang/per koleksi, snippet, halaman relevan, dan search history. Integrasi frontend dilakukan setelah API backend stabil tanpa mengubah desain visual.
+Tahap berikutnya adalah integrasi frontend ke API backend secara bertahap, lalu hardening admin dan demo dataset. Integrasi harus mempertahankan desain visual hasil export Figma Make.

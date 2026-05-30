@@ -727,3 +727,82 @@ Yang sengaja belum dibuat:
 - Snippet hasil pencarian dan relevant pages untuk search.
 - Integrasi frontend ke API.
 - OCR, Celery/Redis, Elasticsearch, vector database, embedding, atau semantic search.
+
+## 21. Progress Tahap 6
+
+Status: selesai untuk search engine TF-IDF, cosine similarity, snippet, relevant pages, filter pencarian, pencarian katalog, dan search history.
+
+Yang sudah dibuat:
+
+- Endpoint `GET /api/v1/search` untuk global PDF search dengan filter `research_field_id`, `research_project_id`, `owner_id`, pagination, dan sorting.
+- Endpoint `GET /api/v1/search/catalog` untuk pencarian katalog bidang dan koleksi dengan pencocokan case-insensitive.
+- Endpoint `GET /api/v1/search/history` untuk riwayat pencarian user aktif.
+- Endpoint `DELETE /api/v1/search/history` untuk menghapus riwayat user aktif.
+- Service `ranking.py` untuk rumus TF-IDF dan cosine similarity eksplisit.
+- Service `snippet.py` untuk snippet plain text dari `raw_text` halaman terbaik.
+- Service `search_service.py` untuk query preprocessing, candidate retrieval dari postings, scoped IDF, ranking, relevant pages, catalog, dan history.
+- Schema `search.py` untuk response search, catalog, dan history.
+- Test backend untuk preprocessing query, ranking, candidate retrieval, filters, privacy, relevant pages, snippet, catalog, history, dan regression tahap 3-5.
+
+Rumus ranking:
+
+```text
+tf_weight(tf) =
+  0 jika tf = 0
+  1 + ln(tf) jika tf > 0
+
+idf(term) = ln((N + 1) / (df(term) + 1)) + 1
+
+weight(term, document) = tf_weight(term_frequency) * idf(term)
+
+cosine_similarity(query, document) =
+  dot_product(query_vector, document_vector) / (query_norm * document_norm)
+```
+
+Scoped IDF:
+
+- `N` adalah jumlah dokumen `indexed` yang dapat diakses user dalam filter aktif.
+- `df(term)` adalah jumlah dokumen unik dalam scope tersebut yang memiliki term.
+- `index_terms.document_frequency` tetap menyimpan statistik global index, tetapi ranking search menghitung DF sesuai visibility dan filter.
+
+Strategi candidate retrieval:
+
+- Query diproses dengan pipeline yang sama seperti dokumen.
+- Search mengambil `index_terms` sesuai processed query terms.
+- Kandidat diambil dari `index_postings`.
+- Scope menerapkan status `indexed`, visibility public/private, owner/admin, field, project, dan owner filter.
+- Search tidak membaca ulang PDF dan tidak melakukan full scan `document_pages` untuk mengambil kandidat.
+
+Strategi relevant pages:
+
+- Page score dihitung dari kontribusi TF-IDF term query pada setiap halaman.
+- Halaman diurutkan berdasarkan skor tertinggi, lalu nomor halaman terkecil jika skor sama.
+- Response mengembalikan maksimal 5 halaman dan `best_page` 1-based.
+
+Strategi snippet:
+
+- Snippet dibuat dari `document_pages.raw_text`, bukan `clean_text`.
+- Surface words pada raw text diproses ulang untuk dicocokkan dengan stem query.
+- Snippet dikirim sebagai plain text yang di-escape, tanpa HTML highlight.
+- Response menyertakan `matched_terms` agar frontend dapat melakukan highlight secara aman.
+
+Aturan privacy:
+
+- User tanpa token ditolak.
+- Dokumen private hanya tampil untuk owner atau admin.
+- Project private user lain pada filter `research_project_id` menghasilkan `404`.
+- Result count dan snippet tidak memasukkan dokumen private yang tidak dapat diakses.
+- Admin dapat mencari seluruh dokumen indexed termasuk private.
+- Field nonaktif tetap boleh dipakai sebagai filter search agar dokumen lama masih bisa ditemukan oleh user yang berhak.
+
+Keputusan teknis:
+
+- Tidak ada migration baru karena tabel `search_histories` sudah tersedia untuk `query`, selected field, selected project, result count, dan timestamp.
+- Filter `owner_id` dipakai saat search, tetapi tidak dipersist di history karena model awal tidak memiliki kolom `owner_id`.
+- Catalog search sengaja bukan TF-IDF PDF search; fungsinya mencari bidang/koleksi dari metadata.
+
+Yang sengaja belum dibuat:
+
+- Integrasi frontend ke API.
+- Admin dashboard API lengkap untuk user/document moderation.
+- OCR, Elasticsearch, vector database, embedding, semantic search, atau library search engine siap pakai.

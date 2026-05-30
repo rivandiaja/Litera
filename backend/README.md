@@ -1,6 +1,6 @@
 # Litera Backend
 
-Backend Litera adalah REST API FastAPI untuk autentikasi, database, migration, seed data MVP, CRUD bidang penelitian, CRUD koleksi penelitian, CRUD dokumen PDF, multiple upload, ekstraksi teks, preprocessing Bahasa Indonesia, dan custom inverted index. Tahap ini belum mencakup endpoint pencarian TF-IDF atau integrasi frontend.
+Backend Litera adalah REST API FastAPI untuk autentikasi, database, migration, seed data MVP, CRUD bidang penelitian, CRUD koleksi penelitian, CRUD dokumen PDF, multiple upload, ekstraksi teks, preprocessing Bahasa Indonesia, custom inverted index, dan search engine TF-IDF. Tahap ini belum mencakup integrasi frontend.
 
 ## Prerequisite
 
@@ -98,6 +98,10 @@ Password berikut hanya untuk demo lokal dan dokumentasi tugas.
 - `PATCH /api/v1/documents/{document_id}` owner/admin
 - `DELETE /api/v1/documents/{document_id}` owner/admin
 - `POST /api/v1/documents/{document_id}/reindex` owner/admin
+- `GET /api/v1/search`
+- `GET /api/v1/search/catalog`
+- `GET /api/v1/search/history`
+- `DELETE /api/v1/search/history`
 
 ## Multipart Upload PDF
 
@@ -187,6 +191,44 @@ Representasi SQLite:
 
 Reindex membersihkan index lama terlebih dahulu agar tidak ada duplicate postings. Delete dokumen membersihkan file fisik, pages, stats, postings, dan term yatim.
 
+## Search TF-IDF
+
+Endpoint utama:
+
+```text
+GET /api/v1/search?q=monitoring+redaman+onu+snmp
+```
+
+Filter yang tersedia:
+
+- `research_field_id`
+- `research_project_id`
+- `owner_id`
+- `page`
+- `page_size`, maksimal 50
+- `sort_by`: `relevance`, `newest`, `title_asc`, `title_desc`
+
+Query memakai pipeline preprocessing yang sama dengan dokumen. Candidate retrieval hanya mengambil kandidat dari `index_terms` dan `index_postings`, lalu menerapkan visibility, filter field, filter project, filter owner, dan status `indexed`. Search tidak membaca ulang PDF dan tidak membangun index baru.
+
+Ranking memakai vector space model:
+
+```text
+tf_weight(tf) = 0 jika tf = 0, selain itu 1 + ln(tf)
+idf(term) = ln((N + 1) / (df(term) + 1)) + 1
+weight(term, document) = tf_weight(term_frequency) * idf(term)
+cosine_similarity = dot(query_vector, document_vector) / (norm(query) * norm(document))
+```
+
+`N` dan `df(term)` dihitung secara scoped sesuai akses user dan filter aktif. Statistik global `index_terms.document_frequency` tetap disimpan untuk presentasi index, tetapi ranking search memakai scoped IDF.
+
+Snippet dibuat dari `document_pages.raw_text` pada halaman terbaik, bukan dari `clean_text`. Backend mengirim plain text yang di-escape, `matched_terms`, maksimal 5 `relevant_pages`, dan `best_page` 1-based.
+
+## Catalog dan History
+
+`GET /api/v1/search/catalog?q=network` mencari katalog bidang dan koleksi dengan pencocokan case-insensitive sederhana. Endpoint ini bukan TF-IDF PDF search.
+
+`GET /api/v1/search/history` menampilkan riwayat pencarian user aktif, terbaru dahulu. `DELETE /api/v1/search/history` hanya menghapus riwayat milik user aktif.
+
 ## Aturan Akses
 
 - Semua endpoint `fields` dan `projects` membutuhkan JWT.
@@ -197,9 +239,11 @@ Reindex membersihkan index lama terlebih dahulu agar tidak ada duplicate posting
 - Koleksi dapat diubah atau dihapus oleh owner atau admin.
 - Upload, patch title, delete, dan reindex dokumen hanya owner project atau admin.
 - Metadata/file dokumen private tidak bocor ke mahasiswa lain dan dikembalikan sebagai `404`.
+- Dokumen private tidak masuk search user lain, tidak memengaruhi result count, dan tidak bocor lewat snippet.
+- Admin dapat mencari seluruh dokumen indexed termasuk private.
+- Field nonaktif tetap boleh dipakai sebagai filter search untuk dokumen lama yang masih dapat diakses.
 
 ## Belum Dibuat pada Tahap Ini
 
-- Ranking TF-IDF.
-- Search endpoint.
 - Integrasi frontend ke backend.
+- Endpoint admin lengkap untuk user/document moderation.

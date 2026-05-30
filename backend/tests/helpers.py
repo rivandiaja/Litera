@@ -1,9 +1,26 @@
+from collections import Counter
+from datetime import datetime
 from fastapi.testclient import TestClient
 import fitz
+from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
+from uuid import uuid4
 
 from app.core.security import get_password_hash
-from app.db.models import Document, IndexStatus, ProjectVisibility, ResearchField, ResearchProject, User, UserRole
+from app.db.models import (
+    Document,
+    DocumentPage,
+    DocumentStats,
+    IndexPosting,
+    IndexStatus,
+    IndexTerm,
+    ProjectVisibility,
+    ResearchField,
+    ResearchProject,
+    User,
+    UserRole,
+)
+from app.services.preprocessing import preprocess_text
 
 DEFAULT_PASSWORD = "Password123!"
 
@@ -118,3 +135,72 @@ def make_pdf_bytes(page_texts: list[str]) -> bytes:
 
 def pdf_upload(filename: str, content: bytes, content_type: str = "application/pdf"):
     return ("files", (filename, content, content_type))
+
+
+def _get_or_create_index_term(db: Session, term_value: str) -> IndexTerm:
+    term = db.scalar(select(IndexTerm).where(IndexTerm.term == term_value))
+    if term is not None:
+        return term
+    term = IndexTerm(term=term_value, document_frequency=0)
+    db.add(term)
+    db.flush()
+    return term
+
+
+def refresh_index_term_document_frequencies(db: Session) -> None:
+    for term in db.scalars(select(IndexTerm)).all():
+        document_frequency = db.scalar(
+            select(func.count(distinct(IndexPosting.document_id))).where(IndexPosting.term_id == term.id)
+        ) or 0
+        term.document_frequency = document_frequency
+    db.commit()
+
+
+def create_indexed_document(
+    db: Session,
+    project: ResearchProject,
+    title: str,
+    pages: list[str],
+    original_filename: str | None = None,
+    created_at: datetime | None = None,
+) -> Document:
+    stored_filename = f"{uuid4().hex}.pdf"
+    document = Document(
+        research_project=project,
+        title=title,
+        original_filename=original_filename or f"{title.lower().replace(' ', '-')}.pdf",
+        stored_filename=stored_filename,
+        file_path=f"uploads/{stored_filename}",
+        total_pages=len(pages),
+        file_size=100,
+        index_status=IndexStatus.INDEXED,
+        index_message=f"Indexing selesai: {len(pages)} halaman diproses.",
+    )
+    if created_at is not None:
+        document.created_at = created_at
+        document.updated_at = created_at
+    db.add(document)
+    db.flush()
+
+    total_terms = 0
+    for page_number, raw_text in enumerate(pages, start=1):
+        clean_text = preprocess_text(raw_text)
+        tokens = clean_text.split()
+        total_terms += len(tokens)
+        db.add(DocumentPage(document_id=document.id, page_number=page_number, raw_text=raw_text, clean_text=clean_text))
+        for term_value, term_frequency in Counter(tokens).items():
+            term = _get_or_create_index_term(db, term_value)
+            db.add(
+                IndexPosting(
+                    term_id=term.id,
+                    document_id=document.id,
+                    page_number=page_number,
+                    term_frequency=term_frequency,
+                )
+            )
+
+    db.add(DocumentStats(document_id=document.id, total_terms=total_terms, indexed_page_count=len(pages)))
+    db.commit()
+    refresh_index_term_document_frequencies(db)
+    db.refresh(document)
+    return document
