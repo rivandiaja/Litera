@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, fields, health, projects
+from app.api.routes import auth, documents, fields, health, projects
 from app.core.config import get_settings
 
 
@@ -21,6 +21,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix=f"{settings.api_v1_prefix}/auth")
     app.include_router(fields.router, prefix=f"{settings.api_v1_prefix}/fields")
     app.include_router(projects.router, prefix=f"{settings.api_v1_prefix}/projects")
+    app.include_router(documents.router, prefix=settings.api_v1_prefix)
 
     return app
 

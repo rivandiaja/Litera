@@ -2,7 +2,7 @@
 
 Litera adalah prototype frontend untuk literature search engine pengelolaan referensi penelitian mahasiswa. Repository ini berasal dari export ZIP desain Figma Make, sehingga desain visual, layout, typography, warna, dan komponen UI perlu dipertahankan semaksimal mungkin.
 
-Status saat ini: frontend prototype dengan mock data, ditambah backend FastAPI tahap awal untuk auth, database, CRUD bidang penelitian, dan CRUD koleksi penelitian. Frontend belum dihubungkan ke backend, sehingga pengalaman visual di browser masih menggunakan mock data export Figma Make.
+Status saat ini: frontend prototype dengan mock data, ditambah backend FastAPI untuk auth, database, CRUD bidang penelitian, CRUD koleksi penelitian, upload PDF, ekstraksi teks, preprocessing Bahasa Indonesia, dan custom inverted index. Frontend belum dihubungkan ke backend, sehingga pengalaman visual di browser masih menggunakan mock data export Figma Make.
 
 ## Prerequisite
 
@@ -52,7 +52,7 @@ Backend tahap awal berada di folder:
 backend/
 ```
 
-Backend menggunakan FastAPI, SQLAlchemy, SQLite, Alembic, PyJWT, dan `pwdlib[argon2]`. Pada tahap saat ini backend menyediakan health check, register, login, `/auth/me`, migration, model database fondasi, seed data demo, CRUD bidang penelitian, dan CRUD koleksi penelitian dengan authorization owner/admin. Frontend belum dihubungkan ke backend.
+Backend menggunakan FastAPI, SQLAlchemy, SQLite, Alembic, PyJWT, `pwdlib[argon2]`, PyMuPDF, Sastrawi, dan `python-multipart`. Pada tahap saat ini backend menyediakan health check, register, login, `/auth/me`, migration, seed data demo, CRUD bidang/koleksi, CRUD dokumen PDF, multiple upload, BackgroundTasks indexing, dan inverted index eksplisit. Frontend belum dihubungkan ke backend.
 
 Setup singkat:
 
@@ -76,4 +76,4 @@ backend/README.md
 
 ## Rencana Tahap Berikutnya
 
-Tahap berikutnya adalah upload PDF, penyimpanan lokal, ekstraksi teks per halaman, preprocessing Bahasa Indonesia, inverted index custom, dan TF-IDF. Integrasi frontend dilakukan setelah API backend stabil tanpa mengubah desain visual.
+Tahap berikutnya adalah endpoint pencarian TF-IDF global/per bidang/per koleksi, snippet, halaman relevan, dan search history. Integrasi frontend dilakukan setelah API backend stabil tanpa mengubah desain visual.

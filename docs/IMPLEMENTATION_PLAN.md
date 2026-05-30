@@ -645,3 +645,85 @@ Yang sengaja belum dibuat:
 - Upload PDF.
 - Ekstraksi PDF, preprocessing, inverted index runtime, TF-IDF, dan search endpoint.
 - Perubahan schema database baru; model awal sudah mencukupi, sehingga tidak ada migration kosong.
+
+## 20. Progress Tahap 5
+
+Status: selesai untuk CRUD dokumen PDF, multiple upload, ekstraksi teks, preprocessing Bahasa Indonesia, dan custom inverted index.
+
+Yang sudah dibuat:
+
+- Endpoint `POST /api/v1/projects/{project_id}/documents` untuk multiple upload PDF memakai multipart field `files`.
+- Endpoint `GET /api/v1/projects/{project_id}/documents` dengan pagination, filter status, dan search judul/filename.
+- Endpoint `GET /api/v1/documents/{document_id}` untuk metadata lengkap, owner, project, field, dan stats.
+- Endpoint `GET /api/v1/documents/{document_id}/file` untuk membuka PDF dari metadata database.
+- Endpoint `PATCH /api/v1/documents/{document_id}` untuk mengubah judul metadata.
+- Endpoint `DELETE /api/v1/documents/{document_id}` untuk menghapus file fisik dan index terkait.
+- Endpoint `POST /api/v1/documents/{document_id}/reindex` untuk membersihkan index lama dan menjalankan indexing ulang.
+- Service `file_storage.py` untuk validasi ekstensi, MIME, magic bytes `%PDF-`, ukuran file, UUID filename, dan path containment.
+- Service `pdf_extractor.py` memakai PyMuPDF `page.get_text("text", sort=True)` per halaman.
+- Service `preprocessing.py` untuk Unicode normalization, case folding, URL/email removal, tokenizing, stopword removal Bahasa Indonesia, stemming Sastrawi, dan whitelist istilah teknis.
+- Service `indexer.py` untuk membangun `document_pages`, `document_stats`, `index_terms`, dan `index_postings`.
+- Background indexing memakai FastAPI `BackgroundTasks` dan membuat session database baru sendiri.
+- Test backend untuk file validation, permission, extraction, preprocessing, indexing, reindex, delete cleanup, dan regression tahap 3/4.
+
+Dependency baru:
+
+- `python-multipart` untuk multipart upload.
+- `PyMuPDF` untuk ekstraksi teks PDF.
+- `Sastrawi` untuk stopword dan stemming Bahasa Indonesia.
+
+Konfigurasi baru:
+
+```env
+UPLOAD_DIR=uploads
+MAX_PDF_SIZE_MB=15
+```
+
+Format inverted index runtime:
+
+```json
+{
+  "snmp": {
+    "17": {
+      "pages": {
+        "1": 2,
+        "3": 5
+      },
+      "frequency": 7
+    }
+  }
+}
+```
+
+Representasi database:
+
+- `index_terms.term`: token hasil preprocessing/stemming.
+- `index_terms.document_frequency`: jumlah dokumen unik yang mengandung term.
+- `index_postings.term_id`: relasi term.
+- `index_postings.document_id`: relasi dokumen.
+- `index_postings.page_number`: halaman 1-based.
+- `index_postings.term_frequency`: frekuensi term pada halaman.
+- `document_stats.total_terms`: total token dokumen.
+- `document_stats.indexed_page_count`: jumlah halaman yang diproses.
+
+Whitelist istilah teknis tahap 5:
+
+```text
+snmp, olt, onu, pppoe, ftth, mikrotik, routeros, api, qos, nms,
+oid, rest, grafana, latency, bandwidth, throughput, packetloss
+```
+
+Keputusan teknis:
+
+- Tidak ada migration baru karena initial schema sudah memiliki unique constraint `index_postings(term_id, document_id, page_number)`, unique `document_stats(document_id)`, dan index relevan.
+- Reindex membersihkan index lama sebelum background task agar duplicate postings tidak terjadi.
+- File upload yang gagal validasi dilaporkan per item tanpa membatalkan file valid dalam batch.
+- PDF scan/image-only menjadi `failed`; OCR tetap di luar scope MVP.
+- Traceback mentah tidak disimpan ke response API atau `index_message`.
+
+Yang sengaja belum dibuat:
+
+- Endpoint search dan ranking TF-IDF.
+- Snippet hasil pencarian dan relevant pages untuk search.
+- Integrasi frontend ke API.
+- OCR, Celery/Redis, Elasticsearch, vector database, embedding, atau semantic search.

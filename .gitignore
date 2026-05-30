@@ -19,6 +19,7 @@ pnpm-debug.log*
 
 backend/uploads/*
 !backend/uploads/.gitkeep
+backend/test_uploads/
 backend/litera.db
 backend/test_litera.db
 backend/*.db

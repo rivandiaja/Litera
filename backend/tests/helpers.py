@@ -1,8 +1,9 @@
 from fastapi.testclient import TestClient
+import fitz
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
-from app.db.models import ProjectVisibility, ResearchField, ResearchProject, User, UserRole
+from app.db.models import Document, IndexStatus, ProjectVisibility, ResearchField, ResearchProject, User, UserRole
 
 DEFAULT_PASSWORD = "Password123!"
 
@@ -76,3 +77,44 @@ def create_project(
     db.commit()
     db.refresh(project)
     return project
+
+
+def create_document(
+    db: Session,
+    project: ResearchProject,
+    file_path: str,
+    title: str = "Document",
+    original_filename: str = "document.pdf",
+    stored_filename: str = "document.pdf",
+    file_size: int = 100,
+    index_status: IndexStatus = IndexStatus.PENDING,
+) -> Document:
+    document = Document(
+        research_project=project,
+        title=title,
+        original_filename=original_filename,
+        stored_filename=stored_filename,
+        file_path=file_path,
+        total_pages=0,
+        file_size=file_size,
+        index_status=index_status,
+    )
+    db.add(document)
+    db.commit()
+    db.refresh(document)
+    return document
+
+
+def make_pdf_bytes(page_texts: list[str]) -> bytes:
+    pdf = fitz.open()
+    for text in page_texts:
+        page = pdf.new_page()
+        if text:
+            page.insert_text((72, 72), text)
+    data = pdf.tobytes()
+    pdf.close()
+    return data
+
+
+def pdf_upload(filename: str, content: bytes, content_type: str = "application/pdf"):
+    return ("files", (filename, content, content_type))
