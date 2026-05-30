@@ -1,34 +1,79 @@
-import { useCallback, useEffect, useState } from "react";
-import { Search, Upload, Share2, FileText, ChevronRight, Globe, Lock, Clock, BookOpen, AlertTriangle, MoreHorizontal, Download, CheckCircle2, Edit2, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import {
+  AlertTriangle,
+  BookOpen,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Edit2,
+  FileText,
+  Globe,
+  Lock,
+  MoreHorizontal,
+  RefreshCcw,
+  Search,
+  Share2,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
 import { useApp } from "../context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useProjectDocuments } from "../../hooks/use-project-documents";
 import { getSafeErrorMessage } from "../../lib/api-error";
-import { adaptProject, type ProjectDisplay } from "../../lib/domain-display";
+import { adaptProject, formatDate, type ProjectDisplay } from "../../lib/domain-display";
+import { documentService } from "../../services/document-service";
 import { projectService } from "../../services/project-service";
+import type { DocumentRead, IndexStatus } from "../../types/document";
 import { Navbar } from "./Navbar";
-import { Avatar, Button, StatusDot, cn } from "./ui";
-import { toast } from "sonner";
+import { Avatar, Button, InputField, StatusDot, cn } from "./ui";
 
-type StatusFilter = "all" | "indexed" | "pending" | "processing" | "failed";
-type PdfListItem = {
-  id: string;
-  title: string;
-  pages: number;
-  uploadedAt: string;
-  indexingStatus: Exclude<StatusFilter, "all">;
-  size: string;
-  failReason?: string;
-};
+type StatusFilter = "all" | IndexStatus;
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getDocumentDate(document: DocumentRead) {
+  return formatDate(document.created_at);
+}
+
+function getFilteredDocuments(documents: DocumentRead[], query: string, filter: StatusFilter) {
+  const normalizedQuery = query.trim().toLowerCase();
+  return documents.filter((document) => {
+    const matchSearch = !normalizedQuery
+      || document.title.toLowerCase().includes(normalizedQuery)
+      || document.original_filename.toLowerCase().includes(normalizedQuery);
+    const matchStatus = filter === "all" || document.index_status === filter;
+    return matchSearch && matchStatus;
+  });
+}
 
 export function CollectionDetailPage({ collectionId }: { collectionId: string }) {
-  const { navigate, setShowUploadModal, setUploadTargetCollectionId } = useApp();
+  const {
+    navigate,
+    setShowUploadModal,
+    setUploadTargetCollectionId,
+    documentsRefreshKey,
+    notifyDocumentsChanged,
+  } = useApp();
   const { user } = useAuth();
+  const projectApiId = Number(collectionId);
+  const validProjectId = Number.isFinite(projectApiId) ? projectApiId : null;
+  const documentsState = useProjectDocuments(validProjectId, documentsRefreshKey);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
   const [copied, setCopied] = useState(false);
   const [collection, setCollection] = useState<ProjectDisplay | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openingDocumentId, setOpeningDocumentId] = useState<number | null>(null);
+  const [mutationDocumentId, setMutationDocumentId] = useState<number | null>(null);
+  const [editingDocument, setEditingDocument] = useState<DocumentRead | null>(null);
+  const [editTitle, setEditTitle] = useState("");
 
   const loadCollection = useCallback(async () => {
     setIsLoading(true);
@@ -44,27 +89,31 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
   }, [collectionId]);
 
   useEffect(() => {
-    loadCollection();
+    void loadCollection();
   }, [loadCollection]);
 
-  const allPdfs: PdfListItem[] = [];
+  const allPdfs = documentsState.documents;
+  const filteredPdfs = useMemo(
+    () => getFilteredDocuments(allPdfs, searchQuery, activeFilter),
+    [allPdfs, searchQuery, activeFilter]
+  );
 
-  const filteredPdfs = allPdfs.filter((p) => {
-    const matchSearch = !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchStatus = activeFilter === "all" || p.indexingStatus === activeFilter;
-    return matchSearch && matchStatus;
-  });
-
-  const counts = {
+  const counts = useMemo(() => ({
     all: allPdfs.length,
-    indexed: allPdfs.filter((p) => p.indexingStatus === "indexed").length,
-    pending: allPdfs.filter((p) => p.indexingStatus === "pending").length,
-    processing: allPdfs.filter((p) => p.indexingStatus === "processing").length,
-    failed: allPdfs.filter((p) => p.indexingStatus === "failed").length,
-  };
+    indexed: allPdfs.filter((pdf) => pdf.index_status === "indexed").length,
+    pending: allPdfs.filter((pdf) => pdf.index_status === "pending").length,
+    processing: allPdfs.filter((pdf) => pdf.index_status === "processing").length,
+    failed: allPdfs.filter((pdf) => pdf.index_status === "failed").length,
+  }), [allPdfs]);
 
   const isOwner = Boolean(collection && user && (user.role === "admin" || collection.owner.id === user.id));
   const indexProgress = allPdfs.length ? Math.round((counts.indexed / allPdfs.length) * 100) : 0;
+
+  function openUploadModal() {
+    if (!collection) return;
+    setUploadTargetCollectionId(collection.id);
+    setShowUploadModal(true);
+  }
 
   function handleShare() {
     setCopied(true);
@@ -72,7 +121,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function handleDelete() {
+  async function handleDeleteCollection() {
     if (!collection || !window.confirm(`Hapus koleksi "${collection.title}"?`)) return;
     try {
       await projectService.remove(collection.apiId);
@@ -80,6 +129,78 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
       navigate({ name: "dashboard" });
     } catch (err) {
       toast.error(getSafeErrorMessage(err));
+    }
+  }
+
+  async function handleOpenDocument(document: DocumentRead) {
+    setOpeningDocumentId(document.id);
+    try {
+      await documentService.openDocumentFile(document.id, document.original_filename);
+    } catch (err) {
+      toast.error(getSafeErrorMessage(err));
+    } finally {
+      setOpeningDocumentId(null);
+    }
+  }
+
+  function beginEditDocument(document: DocumentRead) {
+    setEditingDocument(document);
+    setEditTitle(document.title);
+  }
+
+  async function handleSaveDocumentTitle(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingDocument) return;
+
+    const title = editTitle.trim();
+    if (!title) {
+      toast.error("Judul dokumen tidak boleh kosong.");
+      return;
+    }
+
+    setMutationDocumentId(editingDocument.id);
+    try {
+      await documentService.updateDocumentTitle(editingDocument.id, { title });
+      toast.success("Judul dokumen diperbarui.");
+      setEditingDocument(null);
+      await documentsState.refresh();
+      notifyDocumentsChanged();
+    } catch (err) {
+      toast.error(getSafeErrorMessage(err));
+    } finally {
+      setMutationDocumentId(null);
+    }
+  }
+
+  async function handleReindexDocument(document: DocumentRead) {
+    if (!window.confirm(`Jalankan indexing ulang untuk "${document.title}"?`)) return;
+
+    setMutationDocumentId(document.id);
+    try {
+      await documentService.reindexDocument(document.id);
+      toast.success("Dokumen masuk antrean re-index.");
+      await documentsState.refresh();
+      notifyDocumentsChanged();
+    } catch (err) {
+      toast.error(getSafeErrorMessage(err));
+    } finally {
+      setMutationDocumentId(null);
+    }
+  }
+
+  async function handleDeleteDocument(document: DocumentRead) {
+    if (!window.confirm(`Hapus PDF "${document.title}"?`)) return;
+
+    setMutationDocumentId(document.id);
+    try {
+      await documentService.deleteDocument(document.id);
+      toast.success("PDF berhasil dihapus.");
+      await documentsState.refresh();
+      notifyDocumentsChanged();
+    } catch (err) {
+      toast.error(getSafeErrorMessage(err));
+    } finally {
+      setMutationDocumentId(null);
     }
   }
 
@@ -166,7 +287,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
 
         <div className="grid lg:grid-cols-3 gap-7">
 
-          {/* ── LEFT COLUMN ──────────────────────────────────────────── */}
+          {/* LEFT COLUMN */}
           <div className="lg:col-span-2">
 
             {/* Collection card */}
@@ -202,7 +323,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                   {copied ? "Disalin!" : "Bagikan Koleksi"}
                 </Button>
                 {isOwner && (
-                  <Button variant="secondary" onClick={() => { setUploadTargetCollectionId(collection.id); setShowUploadModal(true); }}>
+                  <Button variant="secondary" onClick={openUploadModal}>
                     <Upload className="w-4 h-4" />
                     Unggah PDF
                   </Button>
@@ -214,7 +335,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                   </Button>
                 )}
                 {isOwner && (
-                  <Button variant="danger" onClick={handleDelete}>
+                  <Button variant="danger" onClick={handleDeleteCollection}>
                     <Trash2 className="w-4 h-4" />
                     Hapus
                   </Button>
@@ -229,8 +350,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                   Literatur PDF ({allPdfs.length})
                 </p>
                 {isOwner && (
-                  <Button size="xs" variant="secondary"
-                    onClick={() => { setUploadTargetCollectionId(collection.id); setShowUploadModal(true); }}>
+                  <Button size="xs" variant="secondary" onClick={openUploadModal}>
                     <Upload className="w-3 h-3" />
                     Tambah PDF
                   </Button>
@@ -243,7 +363,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                   <Search className="w-3.5 h-3.5 text-slate-400 ml-3.5 shrink-0" />
                   <input
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder="Cari dalam koleksi ini..."
                     className="flex-1 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
                   />
@@ -258,81 +378,145 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                   ["pending", "Menunggu"],
                   ["processing", "Memproses"],
                   ["failed", "Gagal"],
-                ] as const).map(([v, l]) => (
+                ] as const).map(([value, label]) => (
                   <button
-                    key={v}
-                    onClick={() => setActiveFilter(v)}
+                    key={value}
+                    onClick={() => setActiveFilter(value)}
                     className={cn(
                       "px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
-                      activeFilter === v
+                      activeFilter === value
                         ? "bg-[#0C0D1A] text-white border-transparent"
                         : "bg-white text-slate-600 border-[rgba(12,13,26,0.1)] hover:border-indigo-300 hover:text-indigo-600"
                     )}
                   >
-                    {l}
-                    <span className={cn("ml-1.5 text-[10px]", activeFilter === v ? "text-white/60" : "text-slate-400")}>
-                      {counts[v]}
+                    {label}
+                    <span className={cn("ml-1.5 text-[10px]", activeFilter === value ? "text-white/60" : "text-slate-400")}>
+                      {counts[value]}
                     </span>
                   </button>
                 ))}
               </div>
 
               <div className="flex flex-col gap-2.5">
-                {filteredPdfs.map((pdf) => (
-                  <div key={pdf.id}
-                    className="bg-white rounded-xl border border-[rgba(12,13,26,0.07)] shadow-[0_1px_2px_rgba(12,13,26,0.04)] p-4 hover:border-[rgba(12,13,26,0.12)] transition-all">
+                {documentsState.isLoading && (
+                  <div className="text-center py-12 text-slate-400 text-sm bg-white rounded-2xl border border-[rgba(12,13,26,0.07)]">
+                    <FileText className="w-8 h-8 text-slate-200 mx-auto mb-2" strokeWidth={1.5} />
+                    Memuat literatur PDF dari API...
+                  </div>
+                )}
+
+                {!documentsState.isLoading && documentsState.error && (
+                  <div className="text-center py-10 text-sm bg-white rounded-2xl border border-red-100">
+                    <AlertTriangle className="w-8 h-8 text-red-300 mx-auto mb-2" strokeWidth={1.5} />
+                    <p className="text-red-600 font-semibold mb-3">{documentsState.error}</p>
+                    <Button size="sm" variant="outline" onClick={() => void documentsState.refresh()}>
+                      Coba Lagi
+                    </Button>
+                  </div>
+                )}
+
+                {!documentsState.isLoading && !documentsState.error && filteredPdfs.map((pdf) => (
+                  <div
+                    key={pdf.id}
+                    className="bg-white rounded-xl border border-[rgba(12,13,26,0.07)] shadow-[0_1px_2px_rgba(12,13,26,0.04)] p-4 hover:border-[rgba(12,13,26,0.12)] transition-all"
+                  >
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center shrink-0">
                         <FileText className="w-4.5 h-4.5 text-red-500" strokeWidth={1.5} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-semibold text-sm text-[#0C0D1A] leading-snug line-clamp-2">{pdf.title}</h3>
-                          <button className="p-1.5 text-slate-300 hover:text-slate-600 rounded-lg hover:bg-slate-100 shrink-0 transition-all">
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-sm text-[#0C0D1A] leading-snug line-clamp-2">{pdf.title}</h3>
+                            <p className="text-[11px] text-slate-400 font-medium mt-1 line-clamp-1">{pdf.original_filename}</p>
+                          </div>
+                          <button className="p-1.5 text-slate-300 hover:text-slate-600 rounded-lg hover:bg-slate-100 shrink-0 transition-all" title="Aksi dokumen">
                             <MoreHorizontal className="w-3.5 h-3.5" />
                           </button>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 mt-2">
-                          <StatusDot status={pdf.indexingStatus} />
-                          <span className="text-[11px] text-slate-400 font-medium">{pdf.pages} hal.</span>
+                          <StatusDot status={pdf.index_status} />
+                          <span className="text-[11px] text-slate-400 font-medium">{pdf.total_pages} hal.</span>
                           <span className="text-slate-200">·</span>
-                          <span className="text-[11px] text-slate-400 font-medium">{pdf.size}</span>
+                          <span className="text-[11px] text-slate-400 font-medium">{formatFileSize(pdf.file_size)}</span>
                           <span className="text-slate-200">·</span>
                           <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
-                            <Clock className="w-3 h-3" />{pdf.uploadedAt}
+                            <Clock className="w-3 h-3" />{getDocumentDate(pdf)}
                           </span>
                         </div>
-                        {pdf.indexingStatus === "failed" && pdf.failReason && (
-                          <div className="mt-2 flex items-start gap-1.5 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-                            <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
-                            <p className="text-xs text-red-600 font-medium">{pdf.failReason}</p>
+                        {pdf.index_message && (pdf.index_status === "failed" || pdf.index_status === "pending" || pdf.index_status === "processing") && (
+                          <div className={cn(
+                            "mt-2 flex items-start gap-1.5 border rounded-lg px-3 py-2",
+                            pdf.index_status === "failed" ? "bg-red-50 border-red-100" : "bg-amber-50 border-amber-100"
+                          )}>
+                            <AlertTriangle className={cn(
+                              "w-3.5 h-3.5 shrink-0 mt-0.5",
+                              pdf.index_status === "failed" ? "text-red-500" : "text-amber-500"
+                            )} />
+                            <p className={cn(
+                              "text-xs font-medium",
+                              pdf.index_status === "failed" ? "text-red-600" : "text-amber-700"
+                            )}>
+                              {pdf.index_message}
+                            </p>
                           </div>
                         )}
-                        {pdf.indexingStatus === "indexed" && (
-                          <div className="flex items-center gap-1.5 mt-2">
-                            <button className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-all">
-                              <BookOpen className="w-3 h-3" />Buka
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                          <button
+                            onClick={() => void handleOpenDocument(pdf)}
+                            disabled={openingDocumentId === pdf.id}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50 px-2.5 py-1 rounded-lg transition-all"
+                          >
+                            <BookOpen className="w-3 h-3" />
+                            {openingDocumentId === pdf.id ? "Membuka..." : "Buka PDF"}
+                          </button>
+                          {isOwner && (
+                            <button
+                              onClick={() => beginEditDocument(pdf)}
+                              disabled={mutationDocumentId === pdf.id}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 px-2.5 py-1 rounded-lg transition-all"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                              Edit Judul
                             </button>
-                            <button className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-all">
-                              <Download className="w-3 h-3" />Unduh
+                          )}
+                          {isOwner && (
+                            <button
+                              onClick={() => void handleReindexDocument(pdf)}
+                              disabled={mutationDocumentId === pdf.id}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-700 bg-violet-50 hover:bg-violet-100 disabled:opacity-50 px-2.5 py-1 rounded-lg transition-all"
+                            >
+                              <RefreshCcw className="w-3 h-3" />
+                              Re-index
                             </button>
-                          </div>
-                        )}
+                          )}
+                          {isOwner && (
+                            <button
+                              onClick={() => void handleDeleteDocument(pdf)}
+                              disabled={mutationDocumentId === pdf.id}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-50 px-2.5 py-1 rounded-lg transition-all"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Hapus
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
-                {filteredPdfs.length === 0 && (
+
+                {!documentsState.isLoading && !documentsState.error && filteredPdfs.length === 0 && (
                   <div className="text-center py-12 text-slate-400 text-sm bg-white rounded-2xl border border-[rgba(12,13,26,0.07)]">
                     <FileText className="w-8 h-8 text-slate-200 mx-auto mb-2" strokeWidth={1.5} />
-                    Daftar PDF belum diintegrasikan pada Tahap 7A
+                    {allPdfs.length === 0 ? "Belum ada literatur PDF pada koleksi ini." : "Tidak ada PDF yang cocok dengan filter saat ini."}
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* ── RIGHT SIDEBAR ─────────────────────────────────────────── */}
+          {/* RIGHT SIDEBAR */}
           <div className="flex flex-col gap-5">
 
             {/* Indexing progress card */}
@@ -357,7 +541,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                   { k: "processing" as const, label: "Memproses", count: counts.processing, color: "bg-indigo-500" },
                   { k: "pending" as const, label: "Menunggu", count: counts.pending, color: "bg-amber-400" },
                   { k: "failed" as const, label: "Gagal", count: counts.failed, color: "bg-red-500" },
-                ] as const).map(({ k, label, count, color }) => (
+                ]).map(({ k, label, count, color }) => (
                   <div key={k} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <span className={cn("w-2 h-2 rounded-full", color, k === "processing" && "animate-pulse")} />
@@ -378,10 +562,10 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                   ["Diperbarui", collection.lastUpdated],
                   ["Email", collection.owner.email],
                   ["NIM", collection.owner.nim],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-slate-400 font-medium">{k}</span>
-                    <span className="text-xs font-semibold text-slate-700 text-right">{v}</span>
+                ].map(([key, value]) => (
+                  <div key={key} className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-slate-400 font-medium">{key}</span>
+                    <span className="text-xs font-semibold text-slate-700 text-right">{value}</span>
                   </div>
                 ))}
               </div>
@@ -402,6 +586,48 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
           </div>
         </div>
       </div>
+
+      <Dialog.Root open={Boolean(editingDocument)} onOpenChange={(open) => !open && setEditingDocument(null)}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50 animate-in fade-in duration-150" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md bg-white rounded-[1.5rem] shadow-2xl shadow-black/20 overflow-hidden animate-in fade-in zoom-in-95 duration-200 mx-4">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[rgba(12,13,26,0.07)]">
+              <div>
+                <Dialog.Title className="font-bold text-[#0C0D1A] text-sm">Edit Judul Dokumen</Dialog.Title>
+                <Dialog.Description className="text-[11px] text-slate-400 font-medium mt-0.5">
+                  Metadata PDF diperbarui tanpa mengubah file asli.
+                </Dialog.Description>
+              </div>
+              <Dialog.Close asChild>
+                <button className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all">
+                  <X className="w-4 h-4" />
+                </button>
+              </Dialog.Close>
+            </div>
+            <form onSubmit={(event) => void handleSaveDocumentTitle(event)} className="px-6 py-5">
+              <InputField
+                label="Judul PDF"
+                value={editTitle}
+                onChange={(event) => setEditTitle(event.target.value)}
+                autoFocus
+              />
+              <div className="flex items-center justify-end gap-2 mt-5">
+                <Button type="button" variant="outline" size="sm" onClick={() => setEditingDocument(null)}>
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  loading={mutationDocumentId === editingDocument?.id}
+                  disabled={mutationDocumentId === editingDocument?.id}
+                >
+                  Simpan
+                </Button>
+              </div>
+            </form>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }

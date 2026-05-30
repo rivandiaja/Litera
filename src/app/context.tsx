@@ -19,6 +19,8 @@ export interface AppContextType {
   setShowUploadModal: (v: boolean) => void;
   uploadTargetCollectionId?: string;
   setUploadTargetCollectionId: (id?: string) => void;
+  documentsRefreshKey: number;
+  notifyDocumentsChanged: () => void;
   isAdmin: boolean;
 }
 
@@ -28,6 +30,8 @@ export const AppContext = createContext<AppContextType>({
   showUploadModal: false,
   setShowUploadModal: () => {},
   setUploadTargetCollectionId: () => {},
+  documentsRefreshKey: 0,
+  notifyDocumentsChanged: () => {},
   isAdmin: false,
 });
 

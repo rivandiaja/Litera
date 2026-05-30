@@ -886,3 +886,57 @@ Rekomendasi Tahap 7B:
 - Tampilkan status indexing nyata dan tombol re-index owner/admin.
 - Integrasikan UI search TF-IDF global, filter bidang, filter koleksi, snippet, relevant pages, dan PDF open endpoint.
 - Tambahkan endpoint agregasi statistik bila dashboard membutuhkan angka repository nyata.
+
+## 23. Progress Tahap 7B-1
+
+Status: selesai untuk integrasi frontend dokumen PDF pada detail koleksi dan modal upload tanpa mengubah desain visual besar.
+
+Yang sudah dibuat:
+
+- Type DTO frontend dokumen di `src/types/document.ts`.
+- Service dokumen berbasis native `fetch` di `src/services/document-service.ts`.
+- Upload multiple PDF memakai `FormData` dengan field multipart `files`; header `Content-Type` tidak diset manual.
+- Helper buka PDF melalui fetch blob ber-Authorization, object URL, `window.open`, dan revoke object URL terjadwal. Token tidak pernah diletakkan di URL.
+- Hook `useProjectDocuments` untuk mengambil daftar PDF koleksi dari `/projects/{project_id}/documents`.
+- Hook `useIndexingPolling` dengan interval 3 detik, hanya aktif saat ada dokumen `pending` atau `processing`, dan berhenti saat semua dokumen terminal atau komponen unmount.
+- `CollectionDetailPage` memakai daftar dokumen API nyata, status indexing nyata, pesan gagal indexing, hitungan progress, open PDF, edit judul, re-index, dan delete PDF.
+- Aksi mutasi PDF hanya tampil untuk owner/admin; non-owner tetap dapat membuka PDF yang bisa dibaca.
+- `UploadModal` memakai daftar koleksi dari `/projects/me` atau target koleksi saat ini, validasi PDF client-side, upload batch ke backend, dan menampilkan hasil per file dari response backend.
+- App context memiliki `documentsRefreshKey` dan `notifyDocumentsChanged` agar list PDF refresh setelah upload/mutasi.
+- README root dan backend README diperbarui sesuai status integrasi.
+- Test frontend ditambahkan untuk document service, upload modal, daftar dokumen/status/permission/mutasi, dan polling indexing.
+
+Yang sengaja belum dibuat pada tahap ini:
+
+- Integrasi UI search TF-IDF.
+- UI search history.
+- Backend baru, migration baru, database baru, authentication baru, atau perubahan search engine.
+- Rebuild desain, penggantian warna/typography/spacing, atau penghapusan mock data global yang belum masuk area dokumen.
+
+Keputusan teknis:
+
+- Area dokumen yang sudah terintegrasi tidak fallback ke mock data.
+- Pencarian kecil pada daftar PDF detail koleksi masih difilter client-side dari daftar dokumen koleksi yang dimuat, sedangkan TF-IDF search tetap menunggu tahap berikutnya.
+- Admin yang membuka koleksi milik user lain tetap dapat upload ke target koleksi detail; jika koleksi itu tidak muncul dari `/projects/me`, modal menampilkan opsi "Koleksi saat ini".
+- Upload progress browser tidak memakai progress event karena native `fetch` belum menyediakan upload progress standar; UI menampilkan status upload dan hasil indexing dari backend.
+
+Perintah verifikasi Tahap 7B-1:
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+python -m pytest
+
+cd ..
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```
+
+Rekomendasi tahap berikutnya:
+
+- Integrasikan UI search TF-IDF global, filter bidang, dan filter koleksi.
+- Tampilkan snippet plain text, matched terms, skor relevansi, dan halaman relevan dari endpoint search.
+- Hubungkan search history UI.
+- Tambahkan endpoint agregasi statistik jika dashboard membutuhkan angka repository yang tidak bisa dihitung dari endpoint saat ini.

@@ -28,6 +28,8 @@ const appContext: AppContextType = {
   showUploadModal: false,
   setShowUploadModal: vi.fn(),
   setUploadTargetCollectionId: vi.fn(),
+  documentsRefreshKey: 0,
+  notifyDocumentsChanged: vi.fn(),
   isAdmin: true,
 };
 

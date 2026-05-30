@@ -2,7 +2,7 @@
 
 Litera adalah prototype frontend untuk literature search engine pengelolaan referensi penelitian mahasiswa. Repository ini berasal dari export ZIP desain Figma Make, sehingga desain visual, layout, typography, warna, dan komponen UI perlu dipertahankan semaksimal mungkin.
 
-Status saat ini: frontend prototype Figma Make sudah mulai terhubung ke backend untuk autentikasi, profil user aktif, bidang penelitian, dan koleksi penelitian. Backend FastAPI sudah menyediakan auth, database, CRUD bidang/koleksi, upload PDF, ekstraksi teks, preprocessing Bahasa Indonesia, custom inverted index, dan search engine TF-IDF. Upload PDF, status indexing, TF-IDF search UI, search history UI, dan dashboard admin penuh belum diintegrasikan ke frontend.
+Status saat ini: frontend prototype Figma Make sudah mulai terhubung ke backend untuk autentikasi, profil user aktif, bidang penelitian, koleksi penelitian, dan dokumen PDF pada detail koleksi. Backend FastAPI sudah menyediakan auth, database, CRUD bidang/koleksi, upload PDF, ekstraksi teks, preprocessing Bahasa Indonesia, custom inverted index, dan search engine TF-IDF. TF-IDF search UI, search history UI, dan dashboard admin penuh belum diintegrasikan ke frontend.
 
 ## Prerequisite
 
@@ -68,7 +68,7 @@ Backend tahap awal berada di folder:
 backend/
 ```
 
-Backend menggunakan FastAPI, SQLAlchemy, SQLite, Alembic, PyJWT, `pwdlib[argon2]`, PyMuPDF, Sastrawi, dan `python-multipart`. Pada tahap saat ini backend menyediakan health check, register, login, `/auth/me`, migration, seed data demo, CRUD bidang/koleksi, CRUD dokumen PDF, multiple upload, BackgroundTasks indexing, inverted index eksplisit, global search TF-IDF, catalog search, dan search history. Frontend Tahap 7A memakai endpoint auth, fields, dan projects.
+Backend menggunakan FastAPI, SQLAlchemy, SQLite, Alembic, PyJWT, `pwdlib[argon2]`, PyMuPDF, Sastrawi, dan `python-multipart`. Pada tahap saat ini backend menyediakan health check, register, login, `/auth/me`, migration, seed data demo, CRUD bidang/koleksi, CRUD dokumen PDF, multiple upload, BackgroundTasks indexing, inverted index eksplisit, global search TF-IDF, catalog search, dan search history. Frontend Tahap 7B-1 memakai endpoint auth, fields, projects, dan documents.
 
 Setup singkat:
 
@@ -108,16 +108,18 @@ Terintegrasi dengan API:
 - Daftar koleksi publik di beranda.
 - Dashboard bagian “Koleksi Saya” melalui `/projects/me`.
 - Detail koleksi, tambah koleksi, edit koleksi, dan hapus koleksi.
+- Daftar dokumen PDF pada detail koleksi melalui `/projects/{project_id}/documents`.
+- Multiple upload PDF melalui multipart field `files`.
+- Status indexing dokumen nyata dan polling ringan saat status `pending` atau `processing`.
+- Buka PDF melalui fetch blob ber-Authorization tanpa token di URL.
+- Edit judul PDF, hapus PDF, dan re-index untuk owner/admin.
 
 Masih mock atau placeholder:
 
-- Upload PDF dan progress upload.
-- Daftar dokumen PDF pada detail koleksi.
-- Status indexing dan re-index dari UI.
 - UI pencarian TF-IDF, search history, dan search suggestions.
 - Dashboard admin selain CRUD bidang penelitian.
 - Statistik repository yang belum tersedia dari endpoint agregasi.
 
 ## Rencana Tahap Berikutnya
 
-Tahap berikutnya adalah Tahap 7B: integrasi upload PDF, daftar dokumen, status indexing, re-index, dan search TF-IDF UI tanpa mengubah desain visual hasil export Figma Make.
+Tahap berikutnya adalah integrasi UI search TF-IDF global/per bidang/per koleksi, snippet, halaman relevan, dan search history tanpa mengubah desain visual hasil export Figma Make.

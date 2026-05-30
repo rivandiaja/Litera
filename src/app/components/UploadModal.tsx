@@ -1,12 +1,27 @@
-import { useState, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Upload, FileText, CheckCircle2, XCircle, Loader2, AlertTriangle, ChevronDown, CloudUpload, Trash2, type LucideIcon } from "lucide-react";
-import { useApp } from "../context";
-import { Button, cn } from "./ui";
-import { COLLECTIONS } from "./data";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  CloudUpload,
+  FileText,
+  Loader2,
+  Trash2,
+  Upload,
+  X,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
+import { useApp } from "../context";
+import { getSafeErrorMessage } from "../../lib/api-error";
+import { documentService } from "../../services/document-service";
+import { projectService } from "../../services/project-service";
+import type { IndexStatus } from "../../types/document";
+import { Button, cn } from "./ui";
 
-type FileStatus = "queued" | "uploading" | "pending" | "processing" | "indexed" | "failed";
+type FileStatus = "queued" | "uploading" | IndexStatus;
 
 interface UploadFile {
   id: string;
@@ -15,16 +30,80 @@ interface UploadFile {
   sizeBytes: number;
   progress: number;
   status: FileStatus;
+  file?: File;
+  documentId?: number;
   error?: string;
 }
 
+interface UploadCollection {
+  id: string;
+  title: string;
+}
+
+const MAX_FILES_PER_BATCH = 10;
+const MAX_PDF_SIZE_MB = 15;
+const MAX_PDF_SIZE_BYTES = MAX_PDF_SIZE_MB * 1024 * 1024;
+
 function formatSize(bytes: number) {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isPdfFile(file: File) {
+  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+}
+
+function createUploadFile(file: File, currentCount: number): UploadFile {
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const base = {
+    id,
+    name: file.name,
+    size: formatSize(file.size),
+    sizeBytes: file.size,
+    progress: 0,
+  };
+
+  if (currentCount >= MAX_FILES_PER_BATCH) {
+    return {
+      ...base,
+      status: "failed",
+      error: `Maksimal ${MAX_FILES_PER_BATCH} file per batch upload.`,
+    };
+  }
+
+  if (!isPdfFile(file)) {
+    return {
+      ...base,
+      status: "failed",
+      error: "Hanya file PDF yang diterima.",
+    };
+  }
+
+  if (file.size <= 0) {
+    return {
+      ...base,
+      status: "failed",
+      error: "File PDF kosong tidak dapat diunggah.",
+    };
+  }
+
+  if (file.size > MAX_PDF_SIZE_BYTES) {
+    return {
+      ...base,
+      status: "failed",
+      error: `Ukuran PDF melebihi batas ${MAX_PDF_SIZE_MB} MB.`,
+    };
+  }
+
+  return {
+    ...base,
+    status: "queued",
+    file,
+  };
+}
+
 const STATUS_CONFIG: Record<FileStatus, { icon: LucideIcon; label: string; color: string; spin?: boolean }> = {
-  queued: { icon: FileText, label: "Menunggu", color: "text-slate-400", spin: false },
+  queued: { icon: FileText, label: "Siap Diunggah", color: "text-slate-400", spin: false },
   uploading: { icon: Loader2, label: "Mengunggah", color: "text-indigo-500", spin: true },
   pending: { icon: Loader2, label: "Menunggu Indexing", color: "text-amber-500", spin: true },
   processing: { icon: Loader2, label: "Memproses Teks", color: "text-violet-500", spin: true },
@@ -33,79 +112,196 @@ const STATUS_CONFIG: Record<FileStatus, { icon: LucideIcon; label: string; color
 };
 
 export function UploadModal() {
-  const { showUploadModal, setShowUploadModal, uploadTargetCollectionId } = useApp();
+  const {
+    showUploadModal,
+    setShowUploadModal,
+    uploadTargetCollectionId,
+    setUploadTargetCollectionId,
+    notifyDocumentsChanged,
+  } = useApp();
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [selectedCollection, setSelectedCollection] = useState(uploadTargetCollectionId ?? COLLECTIONS[0]?.id ?? "");
+  const [selectedCollection, setSelectedCollection] = useState(uploadTargetCollectionId ?? "");
+  const [collections, setCollections] = useState<UploadCollection[]>([]);
+  const [isLoadingCollections, setIsLoadingCollections] = useState(false);
+  const [collectionsError, setCollectionsError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const myCollections = COLLECTIONS.filter((c) => c.owner.id === "u1");
 
-  function simulateUpload(id: string) {
-    let progress = 0;
-    // Phase 1: uploading
-    const upInterval = setInterval(() => {
-      progress += 15 + Math.random() * 20;
-      if (progress >= 100) {
-        clearInterval(upInterval);
-        setFiles((prev) => prev.map((f) => f.id === id ? { ...f, progress: 100, status: "pending" } : f));
-        // Phase 2: processing
-        setTimeout(() => {
-          setFiles((prev) => prev.map((f) => f.id === id ? { ...f, status: "processing" } : f));
-          setTimeout(() => {
-            const willFail = Math.random() < 0.15;
-            setFiles((prev) => prev.map((f) => f.id === id ? {
-              ...f,
-              status: willFail ? "failed" : "indexed",
-              error: willFail ? "PDF tidak memiliki teks yang dapat diekstrak. Dokumen kemungkinan berisi gambar scan." : undefined,
-            } : f));
-            if (willFail) toast.error("1 PDF gagal diindeks");
-          }, 1500 + Math.random() * 1000);
-        }, 600 + Math.random() * 400);
-      } else {
-        setFiles((prev) => prev.map((f) => f.id === id ? { ...f, progress: Math.round(progress), status: "uploading" } : f));
-      }
-    }, 160);
-  }
+  useEffect(() => {
+    if (!showUploadModal) return;
 
-  function addFiles(fileList: FileList) {
-    const pdfs = Array.from(fileList).filter((f) => f.type === "application/pdf" || f.name.endsWith(".pdf"));
-    if (pdfs.length === 0) { toast.error("Hanya file PDF yang diterima"); return; }
+    let active = true;
+    setIsLoadingCollections(true);
+    setCollectionsError(null);
 
-    const newFiles: UploadFile[] = pdfs.map((f) => ({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      name: f.name,
-      size: formatSize(f.size || Math.random() * 4 * 1024 * 1024 + 500 * 1024),
-      sizeBytes: f.size,
-      progress: 0,
-      status: "queued",
-    }));
+    projectService.listMine({ page: 1, page_size: 100 })
+      .then((response) => {
+        if (!active) return;
+        const loaded = response.items.map((project) => ({
+          id: String(project.id),
+          title: project.title,
+        }));
+        setCollections(loaded);
+        setSelectedCollection((current) => uploadTargetCollectionId || current || loaded[0]?.id || "");
+      })
+      .catch((err) => {
+        if (!active) return;
+        setCollectionsError(getSafeErrorMessage(err));
+        setSelectedCollection((current) => uploadTargetCollectionId || current);
+      })
+      .finally(() => {
+        if (active) setIsLoadingCollections(false);
+      });
 
-    setFiles((prev) => [...prev, ...newFiles]);
-    newFiles.forEach((f, i) => setTimeout(() => simulateUpload(f.id), i * 200 + 300));
-    toast.success(`${pdfs.length} PDF siap diunggah`);
-  }
+    return () => {
+      active = false;
+    };
+  }, [showUploadModal, uploadTargetCollectionId]);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    addFiles(e.dataTransfer.files);
+  useEffect(() => {
+    if (showUploadModal && uploadTargetCollectionId) {
+      setSelectedCollection(uploadTargetCollectionId);
+    }
+  }, [showUploadModal, uploadTargetCollectionId]);
+
+  const addFiles = useCallback((fileList: FileList) => {
+    const incoming = Array.from(fileList);
+    if (incoming.length === 0) return;
+
+    setFiles((previous) => {
+      let currentCount = previous.length;
+      const nextFiles = incoming.map((file) => {
+        const uploadFile = createUploadFile(file, currentCount);
+        currentCount += 1;
+        return uploadFile;
+      });
+      return [...previous, ...nextFiles];
+    });
+
+    const validCount = incoming.filter((file) => isPdfFile(file) && file.size > 0 && file.size <= MAX_PDF_SIZE_BYTES).length;
+    if (validCount > 0) {
+      toast.success(`${validCount} PDF siap diunggah`);
+    } else {
+      toast.error("Tidak ada PDF valid yang dapat diunggah");
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }, []);
 
+  const handleDrop = useCallback((event: DragEvent) => {
+    event.preventDefault();
+    setIsDragging(false);
+    addFiles(event.dataTransfer.files);
+  }, [addFiles]);
+
   function handleClose() {
-    const successCount = files.filter((f) => f.status === "indexed").length;
-    if (successCount > 0) toast.success(`${successCount} PDF berhasil terindeks!`);
+    if (isUploading) {
+      toast.error("Tunggu proses upload selesai.");
+      return;
+    }
     setFiles([]);
+    setUploadTargetCollectionId(undefined);
     setShowUploadModal(false);
   }
 
   function removeFile(id: string) {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
+    setFiles((previous) => previous.filter((file) => file.id !== id));
   }
 
-  const active = files.filter((f) => ["uploading", "pending", "processing"].includes(f.status)).length;
-  const done = files.filter((f) => ["indexed", "failed"].includes(f.status)).length;
-  const succeeded = files.filter((f) => f.status === "indexed").length;
-  const overallPct = files.length ? Math.round((done / files.length) * 100) : 0;
+  async function handleUpload() {
+    const queuedFiles = files.filter((file) => file.status === "queued" && file.file);
+    if (!selectedCollection) {
+      toast.error("Pilih koleksi tujuan terlebih dahulu.");
+      return;
+    }
+    if (queuedFiles.length === 0) {
+      toast.error("Pilih minimal satu PDF valid untuk diunggah.");
+      return;
+    }
+
+    const projectId = Number(selectedCollection);
+    if (!Number.isFinite(projectId)) {
+      toast.error("Koleksi tujuan tidak valid.");
+      return;
+    }
+
+    const queuedIds = new Set(queuedFiles.map((file) => file.id));
+    setIsUploading(true);
+    setFiles((previous) => previous.map((file) => (
+      queuedIds.has(file.id)
+        ? { ...file, status: "uploading", progress: 35, error: undefined }
+        : file
+    )));
+
+    try {
+      const response = await documentService.uploadProjectDocuments(
+        projectId,
+        queuedFiles.map((file) => file.file).filter((file): file is File => Boolean(file))
+      );
+      const remainingItems = [...response.items];
+
+      setFiles((previous) => previous.map((file) => {
+        if (!queuedIds.has(file.id)) return file;
+
+        const matchIndex = remainingItems.findIndex((item) => item.original_filename === file.name);
+        const result = matchIndex >= 0 ? remainingItems.splice(matchIndex, 1)[0] : undefined;
+        if (!result) {
+          return {
+            ...file,
+            status: "failed",
+            progress: 100,
+            error: "Server tidak mengembalikan status untuk file ini.",
+          };
+        }
+
+        if (!result.accepted) {
+          return {
+            ...file,
+            status: "failed",
+            progress: 100,
+            error: result.error || "PDF ditolak oleh server.",
+          };
+        }
+
+        return {
+          ...file,
+          status: result.index_status || "pending",
+          documentId: result.document_id || undefined,
+          size: result.file_size ? formatSize(result.file_size) : file.size,
+          progress: 100,
+          error: undefined,
+        };
+      }));
+
+      if (response.accepted_count > 0) {
+        toast.success(`${response.accepted_count} PDF diterima dan masuk antrean indexing.`);
+        notifyDocumentsChanged();
+      }
+      if (response.failed_count > 0) {
+        toast.error(`${response.failed_count} PDF gagal diterima.`);
+      }
+    } catch (err) {
+      const message = getSafeErrorMessage(err);
+      setFiles((previous) => previous.map((file) => (
+        queuedIds.has(file.id)
+          ? { ...file, status: "failed", progress: 100, error: message }
+          : file
+      )));
+      toast.error(message);
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  const selectedCollectionIsListed = collections.some((collection) => collection.id === selectedCollection);
+  const queuedCount = files.filter((file) => file.status === "queued" && file.file).length;
+  const active = files.filter((file) => file.status === "uploading").length;
+  const done = files.filter((file) => file.status !== "queued" && file.status !== "uploading").length;
+  const accepted = files.filter((file) => ["pending", "processing", "indexed"].includes(file.status)).length;
+  const overallPct = files.length ? Math.round(((done + active * 0.35) / files.length) * 100) : 0;
 
   return (
     <Dialog.Root open={showUploadModal} onOpenChange={(open) => !open && handleClose()}>
@@ -121,11 +317,16 @@ export function UploadModal() {
               </div>
               <div>
                 <Dialog.Title className="font-bold text-[#0C0D1A] text-sm">Unggah Literatur PDF</Dialog.Title>
-                <p className="text-[11px] text-slate-400 font-medium mt-0.5">Maks. 10 file · 50 MB per file</p>
+                <Dialog.Description className="text-[11px] text-slate-400 font-medium mt-0.5">
+                  Maks. 10 file · {MAX_PDF_SIZE_MB} MB per file
+                </Dialog.Description>
               </div>
             </div>
             <Dialog.Close asChild>
-              <button className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all">
+              <button
+                disabled={isUploading}
+                className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-50 rounded-xl transition-all"
+              >
                 <X className="w-4 h-4" />
               </button>
             </Dialog.Close>
@@ -140,32 +341,48 @@ export function UploadModal() {
               <div className="relative">
                 <select
                   value={selectedCollection}
-                  onChange={(e) => setSelectedCollection(e.target.value)}
-                  className="w-full pl-4 pr-10 py-2.5 bg-slate-50/80 border border-[rgba(12,13,26,0.1)] rounded-xl text-sm text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 appearance-none"
+                  onChange={(event) => setSelectedCollection(event.target.value)}
+                  disabled={isLoadingCollections || isUploading}
+                  className="w-full pl-4 pr-10 py-2.5 bg-slate-50/80 border border-[rgba(12,13,26,0.1)] rounded-xl text-sm text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 appearance-none disabled:opacity-60"
                 >
-                  {myCollections.map((c) => (
-                    <option key={c.id} value={c.id}>{c.title}</option>
+                  {!selectedCollection && <option value="">Pilih koleksi...</option>}
+                  {selectedCollection && !selectedCollectionIsListed && (
+                    <option value={selectedCollection}>Koleksi saat ini</option>
+                  )}
+                  {collections.map((collection) => (
+                    <option key={collection.id} value={collection.id}>{collection.title}</option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
+              {collectionsError && (
+                <p className="text-[11px] text-red-500 font-medium">{collectionsError}</p>
+              )}
             </div>
 
             {/* Drop zone */}
             <div
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragOver={(event) => { event.preventDefault(); setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => !isUploading && fileInputRef.current?.click()}
               className={cn(
                 "border-2 border-dashed rounded-2xl py-12 text-center cursor-pointer transition-all duration-200 select-none relative overflow-hidden",
                 isDragging
                   ? "border-indigo-400 bg-indigo-50/80 scale-[1.01]"
-                  : "border-[rgba(12,13,26,0.1)] hover:border-indigo-300/70 hover:bg-slate-50/60"
+                  : "border-[rgba(12,13,26,0.1)] hover:border-indigo-300/70 hover:bg-slate-50/60",
+                isUploading && "opacity-60 cursor-not-allowed"
               )}
             >
-              <input ref={fileInputRef} type="file" accept=".pdf,application/pdf" multiple className="hidden"
-                onChange={(e) => e.target.files && addFiles(e.target.files)} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                multiple
+                className="hidden"
+                disabled={isUploading}
+                onChange={(event) => event.target.files && addFiles(event.target.files)}
+              />
               <div className={cn(
                 "w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-200",
                 isDragging ? "bg-indigo-100 scale-110" : "bg-slate-100"
@@ -179,12 +396,16 @@ export function UploadModal() {
             </div>
 
             {/* Overall progress */}
-            {files.length > 0 && active > 0 && (
+            {files.length > 0 && (active > 0 || accepted > 0) && (
               <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
-                    <span className="text-xs font-bold text-indigo-700">{active} file diproses...</span>
+                    {active > 0 ? (
+                      <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
+                    )}
+                    <span className="text-xs font-bold text-indigo-700">{active > 0 ? `${active} file diunggah...` : `${accepted} PDF diterima backend`}</span>
                   </div>
                   <span className="text-xs text-indigo-500 font-semibold">{overallPct}%</span>
                 </div>
@@ -202,7 +423,7 @@ export function UploadModal() {
                     {files.length} File
                   </p>
                   {done > 0 && (
-                    <p className="text-[11px] text-slate-400 font-medium">{succeeded} berhasil · {files.filter((f) => f.status === "failed").length} gagal</p>
+                    <p className="text-[11px] text-slate-400 font-medium">{accepted} diterima · {files.filter((file) => file.status === "failed").length} gagal</p>
                   )}
                 </div>
 
@@ -213,7 +434,7 @@ export function UploadModal() {
                     <div key={file.id}
                       className={cn(
                         "rounded-xl border p-3.5 transition-all",
-                        file.status === "indexed" ? "bg-emerald-50/50 border-emerald-100" :
+                        file.status === "indexed" || file.status === "pending" || file.status === "processing" ? "bg-emerald-50/50 border-emerald-100" :
                         file.status === "failed" ? "bg-red-50/50 border-red-100" :
                         "bg-slate-50 border-[rgba(12,13,26,0.08)]"
                       )}>
@@ -251,8 +472,11 @@ export function UploadModal() {
                           )}
                         </div>
                         {["queued", "failed"].includes(file.status) && (
-                          <button onClick={() => removeFile(file.id)}
-                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all shrink-0">
+                          <button
+                            onClick={() => removeFile(file.id)}
+                            disabled={isUploading}
+                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 disabled:opacity-50 rounded-lg transition-all shrink-0"
+                          >
                             <Trash2 className="w-3 h-3" />
                           </button>
                         )}
@@ -267,13 +491,16 @@ export function UploadModal() {
           {/* Footer */}
           <div className="px-6 py-4 border-t border-[rgba(12,13,26,0.07)] flex items-center justify-between gap-3 bg-slate-50/50">
             <p className="text-xs text-slate-400 font-medium">
-              {files.length === 0 ? "Belum ada file dipilih" : `${succeeded}/${files.length} berhasil diindeks`}
+              {files.length === 0 ? "Belum ada file dipilih" : `${accepted}/${files.length} diterima backend`}
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleClose}>
-                {active > 0 ? "Tutup & Lanjutkan" : "Tutup"}
+              <Button variant="outline" size="sm" onClick={handleClose} disabled={isUploading}>
+                Tutup
               </Button>
-              <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={active > 0}>
+              <Button size="sm" onClick={handleUpload} disabled={queuedCount === 0 || isUploading || !selectedCollection} loading={isUploading}>
+                Unggah
+              </Button>
+              <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
                 <Upload className="w-3.5 h-3.5" />
                 Tambah File
               </Button>

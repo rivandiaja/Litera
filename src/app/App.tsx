@@ -27,6 +27,7 @@ function AppShell() {
   const [page, setPage] = useState<Page>({ name: "login" });
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadTargetCollectionId, setUploadTargetCollectionId] = useState<string | undefined>();
+  const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
   const { user, isAuthenticated, isLoading } = useAuth();
   const isAdmin = user?.role === "admin";
 
@@ -43,6 +44,10 @@ function AppShell() {
   function navigate(p: Page) {
     setPage(p);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function notifyDocumentsChanged() {
+    setDocumentsRefreshKey((value) => value + 1);
   }
 
   function renderPage() {
@@ -80,6 +85,8 @@ function AppShell() {
         setShowUploadModal,
         uploadTargetCollectionId,
         setUploadTargetCollectionId,
+        documentsRefreshKey,
+        notifyDocumentsChanged,
         isAdmin,
       }}
     >
