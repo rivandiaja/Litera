@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Search, FileText, X, ArrowLeft, SlidersHorizontal, FolderOpen, BookOpen, Loader2, ChevronDown } from "lucide-react";
 import { useApp } from "../context";
 import { Navbar } from "./Navbar";
-import { Badge, Avatar, Button, Chip, cn } from "./ui";
+import { Badge, Avatar, Button, Chip, cn, type BadgeVariant } from "./ui";
 import { SEARCH_RESULTS, FIELDS } from "./data";
 
 export function SearchResultsPage({ query }: { query: string }) {
@@ -29,7 +29,7 @@ export function SearchResultsPage({ query }: { query: string }) {
   const activeFilters = (filterField ? 1 : 0) + (sortBy !== "relevance" ? 1 : 0);
 
   // Field accent for result cards
-  const fieldBadgeVariant = (name: string): any => {
+  const fieldBadgeVariant = (name: string): BadgeVariant => {
     if (name.toLowerCase().includes("jaringan")) return "indigo";
     if (name.toLowerCase().includes("inteli") || name.toLowerCase().includes("artificial")) return "lavender";
     if (name.toLowerCase().includes("iot")) return "mint";
@@ -236,7 +236,7 @@ export function SearchResultsPage({ query }: { query: string }) {
 
             ) : (
               <div className="flex flex-col gap-3.5">
-                {results.map((result, idx) => (
+                {results.map((result) => (
                   <div key={result.pdfId}
                     className="bg-white rounded-[1.25rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_4px_rgba(12,13,26,0.05)] hover:shadow-[0_6px_20px_rgba(12,13,26,0.09)] hover:border-[rgba(12,13,26,0.11)] transition-all duration-200 overflow-hidden group">
 

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, BookOpen, FileText, Activity, History,
   User, LogOut, Plus, Upload, Clock, CheckCircle2,
   AlertCircle, ChevronRight, TrendingUp, Search, Menu, X,
-  Loader2, Sparkles
+  Loader2, Sparkles, type LucideIcon
 } from "lucide-react";
 import { useApp } from "../context";
 import { Avatar, Button, Badge, StatusDot, ProgressBar, cn } from "./ui";
@@ -28,7 +28,7 @@ const SEARCH_HISTORY = [
   "analisis sentimen twitter ensemble learning",
 ];
 
-const NAV_ITEMS: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const NAV_ITEMS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Ringkasan", icon: LayoutDashboard },
   { id: "collections", label: "Koleksi Saya", icon: BookOpen },
   { id: "pdfs", label: "Literatur Saya", icon: FileText },

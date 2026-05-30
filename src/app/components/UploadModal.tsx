@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Upload, FileText, CheckCircle2, XCircle, Loader2, AlertTriangle, ChevronDown, CloudUpload, Trash2 } from "lucide-react";
+import { X, Upload, FileText, CheckCircle2, XCircle, Loader2, AlertTriangle, ChevronDown, CloudUpload, Trash2, type LucideIcon } from "lucide-react";
 import { useApp } from "../context";
-import { Button, StatusDot, cn } from "./ui";
+import { Button, cn } from "./ui";
 import { COLLECTIONS } from "./data";
 import { toast } from "sonner";
 
@@ -23,7 +23,7 @@ function formatSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const STATUS_CONFIG: Record<FileStatus, { icon: React.ComponentType<{ className?: string }>; label: string; color: string; spin?: boolean }> = {
+const STATUS_CONFIG: Record<FileStatus, { icon: LucideIcon; label: string; color: string; spin?: boolean }> = {
   queued: { icon: FileText, label: "Menunggu", color: "text-slate-400", spin: false },
   uploading: { icon: Loader2, label: "Mengunggah", color: "text-indigo-500", spin: true },
   pending: { icon: Loader2, label: "Menunggu Indexing", color: "text-amber-500", spin: true },

@@ -51,7 +51,7 @@ export function Button({ variant = "primary", size = "md", children, loading, ic
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 
-type BadgeVariant = "indigo" | "mint" | "coral" | "gray" | "lavender" | "warning" | "sky" | "rose" | "dark";
+export type BadgeVariant = "indigo" | "mint" | "coral" | "gray" | "lavender" | "warning" | "sky" | "rose" | "dark";
 
 export function Badge({ variant = "gray", children, className }: { variant?: BadgeVariant; children: ReactNode; className?: string }) {
   const variants: Record<BadgeVariant, string> = {

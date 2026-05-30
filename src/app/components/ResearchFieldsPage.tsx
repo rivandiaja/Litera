@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Search, ArrowLeft, ArrowRight, Network, Brain, Cpu, Database, BarChart2, Code2, BookOpen, FileText, Clock, ChevronRight, Users } from "lucide-react";
+import { Search, ArrowRight, Network, Brain, Cpu, Database, BarChart2, Code2, BookOpen, FileText, Clock, ChevronRight, type LucideIcon } from "lucide-react";
 import { useApp } from "../context";
 import { Navbar } from "./Navbar";
-import { Badge, Avatar, Button, cn } from "./ui";
+import { Avatar, Button, cn } from "./ui";
 import { FIELDS, COLLECTIONS, PDFS, type Field } from "./data";
 
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   Network, Brain, Cpu, Database, BarChart2, Code2,
 };
 

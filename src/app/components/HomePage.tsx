@@ -2,13 +2,14 @@ import { useState } from "react";
 import {
   Search, ChevronDown, BookOpen, ArrowRight,
   Network, Brain, Cpu, Database, BarChart2, Code2, FileText, Upload,
+  type LucideIcon,
 } from "lucide-react";
 import { useApp } from "../context";
 import { Navbar } from "./Navbar";
-import { Badge, Avatar, cn } from "./ui";
+import { Badge, Avatar, cn, type BadgeVariant } from "./ui";
 import { FIELDS, COLLECTIONS } from "./data";
 
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   Network, Brain, Cpu, Database, BarChart2, Code2,
 };
 
@@ -337,7 +338,7 @@ export function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {COLLECTIONS.map((col) => {
             const stripColor = COLLECTION_STRIP[col.fieldId] || "bg-slate-400";
-            const badgeVariant = col.fieldId === "jaringan-komputer" ? "indigo"
+            const badgeVariant: BadgeVariant = col.fieldId === "jaringan-komputer" ? "indigo"
               : col.fieldId === "artificial-intelligence" ? "lavender"
               : col.fieldId === "iot" ? "mint"
               : col.fieldId === "sistem-informasi" ? "sky"
@@ -356,7 +357,7 @@ export function HomePage() {
                 <div className="p-5">
                   {/* Field badge + privacy */}
                   <div className="flex items-center justify-between mb-3.5">
-                    <Badge variant={badgeVariant as any}>{col.fieldName}</Badge>
+                    <Badge variant={badgeVariant}>{col.fieldName}</Badge>
                     {!col.isPublic && (
                       <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Privat</span>
                     )}

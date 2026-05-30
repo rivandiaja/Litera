@@ -3,21 +3,21 @@ import {
   LayoutDashboard, Network, Users, BookOpen, FileText, Activity, Settings, LogOut,
   Plus, Search, Edit2, Trash2, X, Menu, Brain, Cpu, Database, BarChart2, Code2,
   AlertTriangle, CheckCircle2, Loader2, TrendingUp, Eye, Shield, ChevronRight,
-  RefreshCw, ArrowUpRight, MoreVertical,
+  RefreshCw, ArrowUpRight, MoreVertical, type LucideIcon,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useApp } from "../context";
-import { Card, Badge, Button, Avatar, InputField, TextareaField, StatusDot, cn } from "./ui";
+import { Badge, Button, Avatar, InputField, TextareaField, StatusDot, cn } from "./ui";
 import { FIELDS, PDFS, COLLECTIONS, OWNERS } from "./data";
 import { toast } from "sonner";
 
 type Tab = "overview" | "fields" | "users" | "collections" | "documents" | "indexing" | "settings";
 
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   Network, Brain, Cpu, Database, BarChart2, Code2,
 };
 
-const NAV_ITEMS: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }>; badge?: number }[] = [
+const NAV_ITEMS: { id: Tab; label: string; icon: LucideIcon; badge?: number }[] = [
   { id: "overview", label: "Ringkasan", icon: LayoutDashboard },
   { id: "fields", label: "Bidang Penelitian", icon: Network },
   { id: "users", label: "Pengguna", icon: Users },
