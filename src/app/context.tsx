@@ -9,7 +9,7 @@ export type Page =
   | { name: "field-detail"; fieldId: string }
   | { name: "collection"; collectionId: string }
   | { name: "dashboard"; tab?: string }
-  | { name: "create-collection" }
+  | { name: "create-collection"; projectId?: string }
   | { name: "admin"; tab?: string };
 
 export interface AppContextType {

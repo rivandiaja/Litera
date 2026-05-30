@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard, BookOpen, FileText, Activity, History,
   User, LogOut, Plus, Upload, Clock, CheckCircle2,
@@ -6,8 +6,12 @@ import {
   Loader2, Sparkles, type LucideIcon
 } from "lucide-react";
 import { useApp } from "../context";
+import { useAuth } from "../../contexts/AuthContext";
+import { getSafeErrorMessage } from "../../lib/api-error";
+import { adaptProject, getAvatarColor, getInitials, type ProjectDisplay } from "../../lib/domain-display";
+import { projectService } from "../../services/project-service";
 import { Avatar, Button, Badge, StatusDot, ProgressBar, cn } from "./ui";
-import { COLLECTIONS, PDFS } from "./data";
+import { PDFS } from "./data";
 import { toast } from "sonner";
 
 type Tab = "overview" | "collections" | "pdfs" | "indexing" | "history" | "profile";
@@ -39,16 +43,48 @@ const NAV_ITEMS: { id: Tab; label: string; icon: LucideIcon }[] = [
 
 export function StudentDashboard() {
   const { navigate, setShowUploadModal } = useApp();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [myCollections, setMyCollections] = useState<ProjectDisplay[]>([]);
+  const [collectionsLoading, setCollectionsLoading] = useState(true);
+  const [collectionsError, setCollectionsError] = useState<string | null>(null);
 
-  const myCollections = COLLECTIONS.filter((c) => c.owner.id === "u1");
   const myPdfs = PDFS.filter((p) => myCollections.some((c) => c.id === p.collectionId));
   const indexed = myPdfs.filter((p) => p.indexingStatus === "indexed");
   const processing = myPdfs.filter((p) => ["pending", "processing"].includes(p.indexingStatus));
   const failed = myPdfs.filter((p) => p.indexingStatus === "failed");
   const totalPages = indexed.reduce((s, p) => s + p.pages, 0);
   const indexPct = myPdfs.length ? Math.round((indexed.length / myPdfs.length) * 100) : 0;
+  const initials = getInitials(user?.name);
+  const avatarColor = getAvatarColor(user?.id || 1);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadMyCollections() {
+      setCollectionsLoading(true);
+      setCollectionsError(null);
+      try {
+        const response = await projectService.listMine({ page_size: 100, sort_by: "newest" });
+        if (active) setMyCollections(response.items.map(adaptProject));
+      } catch (error) {
+        if (active) setCollectionsError(getSafeErrorMessage(error));
+      } finally {
+        if (active) setCollectionsLoading(false);
+      }
+    }
+
+    loadMyCollections();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  function handleLogout() {
+    logout();
+    navigate({ name: "login" });
+  }
 
   // ── Sidebar ──────────────────────────────────────────────────────────────
 
@@ -102,14 +138,14 @@ export function StudentDashboard() {
         {/* User */}
         <div className="px-3 pb-4 border-t border-[rgba(12,13,26,0.06)] pt-3">
           <div className="flex items-center gap-2.5 px-3 py-2.5 mb-1 rounded-xl bg-slate-50/80">
-            <Avatar initials="AB" color="bg-indigo-500" size="sm" />
+            <Avatar initials={initials} color={avatarColor} size="sm" />
             <div className="min-w-0">
-              <p className="text-xs font-bold text-[#0C0D1A] truncate">Arif Budiman</p>
-              <p className="text-[10px] text-slate-400 truncate">TI-4A · NIM 19416255201</p>
+              <p className="text-xs font-bold text-[#0C0D1A] truncate">{user?.name || "Pengguna Litera"}</p>
+              <p className="text-[10px] text-slate-400 truncate">{user?.class_name || "-"} · NIM {user?.student_number || "-"}</p>
             </div>
           </div>
           <button
-            onClick={() => { toast.info("Sampai jumpa!"); navigate({ name: "login" }); }}
+            onClick={() => { toast.info("Sampai jumpa!"); handleLogout(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[0.8125rem] font-semibold text-red-500 hover:bg-red-50 hover:text-red-600 transition-all"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -132,7 +168,7 @@ export function StudentDashboard() {
           <div className="relative flex items-start justify-between gap-4">
             <div>
               <p className="text-[10px] font-semibold text-indigo-400 uppercase tracking-[0.12em] mb-2">Dasbor Mahasiswa</p>
-              <h1 className="text-xl font-bold text-white tracking-tight mb-1">Selamat datang, Arif 👋</h1>
+              <h1 className="text-xl font-bold text-white tracking-tight mb-1">Selamat datang, {user?.name.split(" ")[0] || "mahasiswa"}</h1>
               <p className="text-slate-500 text-sm">Berikut ringkasan aktivitas penelitianmu hari ini.</p>
             </div>
             <Button size="sm" variant="white" onClick={() => setShowUploadModal(true)} className="hidden sm:flex shrink-0">
@@ -230,7 +266,17 @@ export function StudentDashboard() {
             </Button>
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
-            {myCollections.map((col) => (
+            {collectionsLoading && (
+              <div className="bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] p-4 text-sm text-slate-400">
+                Memuat koleksi saya dari API...
+              </div>
+            )}
+            {!collectionsLoading && collectionsError && (
+              <div className="bg-white rounded-[1.125rem] border border-red-100 p-4 text-sm text-red-600 font-semibold">
+                {collectionsError}
+              </div>
+            )}
+            {!collectionsLoading && !collectionsError && myCollections.map((col) => (
               <div key={col.id} onClick={() => navigate({ name: "collection", collectionId: col.id })}
                 className="group bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] p-4 cursor-pointer hover:shadow-[0_4px_12px_rgba(12,13,26,0.08)] hover:border-[rgba(12,13,26,0.12)] transition-all">
                 <div className="flex items-start justify-between gap-2 mb-2">
@@ -244,6 +290,11 @@ export function StudentDashboard() {
                 </div>
               </div>
             ))}
+            {!collectionsLoading && !collectionsError && myCollections.length === 0 && (
+              <div className="bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] p-4 text-sm text-slate-400">
+                Belum ada koleksi milikmu.
+              </div>
+            )}
             <button onClick={() => navigate({ name: "create-collection" })}
               className="group border-2 border-dashed border-[rgba(12,13,26,0.1)] rounded-[1.125rem] p-4 min-h-[120px] flex flex-col items-center justify-center gap-2 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all">
               <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
@@ -275,7 +326,17 @@ export function StudentDashboard() {
           </Button>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {myCollections.map((col) => (
+          {collectionsLoading && (
+            <div className="sm:col-span-2 lg:col-span-3 bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] p-8 text-center text-sm text-slate-400">
+              Memuat koleksi saya dari API...
+            </div>
+          )}
+          {!collectionsLoading && collectionsError && (
+            <div className="sm:col-span-2 lg:col-span-3 bg-white rounded-[1.125rem] border border-red-100 p-8 text-center text-sm text-red-600 font-semibold">
+              {collectionsError}
+            </div>
+          )}
+          {!collectionsLoading && !collectionsError && myCollections.map((col) => (
             <div key={col.id} onClick={() => navigate({ name: "collection", collectionId: col.id })}
               className="group bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] p-5 cursor-pointer hover:shadow-[0_4px_14px_rgba(12,13,26,0.09)] hover:border-[rgba(12,13,26,0.12)] transition-all overflow-hidden">
               <div className="flex items-start justify-between gap-2 mb-3">
@@ -290,6 +351,11 @@ export function StudentDashboard() {
               </div>
             </div>
           ))}
+          {!collectionsLoading && !collectionsError && myCollections.length === 0 && (
+            <div className="sm:col-span-2 lg:col-span-3 bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] p-8 text-center text-sm text-slate-400">
+              Belum ada koleksi milikmu.
+            </div>
+          )}
         </div>
       </div>
     ),
@@ -384,22 +450,22 @@ export function StudentDashboard() {
           </div>
           <div className="px-7 pb-7">
             <div className="flex items-end gap-4 -mt-8 mb-5">
-              <Avatar initials="AB" color="bg-indigo-500" size="xl" />
+              <Avatar initials={initials} color={avatarColor} size="xl" />
               <div className="pb-1">
-                <h3 className="text-lg font-bold text-[#0C0D1A]">Arif Budiman</h3>
-                <p className="text-sm text-slate-500">arif@mahasiswa.ac.id</p>
+                <h3 className="text-lg font-bold text-[#0C0D1A]">{user?.name || "Pengguna Litera"}</h3>
+                <p className="text-sm text-slate-500">{user?.email || "-"}</p>
               </div>
             </div>
             <div className="flex gap-2 mb-6">
-              <Badge variant="indigo">Mahasiswa</Badge>
-              <Badge variant="gray">Teknik Informatika</Badge>
+              <Badge variant="indigo">{user?.role === "admin" ? "Admin" : "Mahasiswa"}</Badge>
+              <Badge variant="gray">{user?.study_program || "-"}</Badge>
             </div>
             <div className="flex flex-col gap-0">
               {[
-                ["NIM", "2021001234"],
-                ["Program Studi", "Teknik Informatika"],
-                ["Kelas", "TI-4A"],
-                ["Bergabung", "September 2024"],
+                ["NIM", user?.student_number || "-"],
+                ["Program Studi", user?.study_program || "-"],
+                ["Kelas", user?.class_name || "-"],
+                ["Bergabung", user?.created_at ? new Date(user.created_at).toLocaleDateString("id-ID") : "-"],
               ].map(([k, v]) => (
                 <div key={k} className="flex items-center justify-between py-3 border-b border-[rgba(12,13,26,0.06)] last:border-0">
                   <span className="text-sm text-slate-400 font-medium">{k}</span>
@@ -440,7 +506,7 @@ export function StudentDashboard() {
           </button>
           <span className="font-bold text-slate-900 tracking-tight">Dashboard</span>
           <div className="ml-auto">
-            <Avatar initials="AB" color="bg-indigo-500" size="sm" />
+            <Avatar initials={initials} color={avatarColor} size="sm" />
           </div>
         </div>
 

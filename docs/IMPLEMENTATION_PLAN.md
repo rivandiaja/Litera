@@ -806,3 +806,83 @@ Yang sengaja belum dibuat:
 - Integrasi frontend ke API.
 - Admin dashboard API lengkap untuk user/document moderation.
 - OCR, Elasticsearch, vector database, embedding, semantic search, atau library search engine siap pakai.
+
+## 22. Progress Tahap 7A
+
+Status: selesai untuk integrasi frontend dasar ke REST API auth, profil, bidang penelitian, dan koleksi penelitian.
+
+Yang sudah dibuat:
+
+- `.env.example` frontend dengan `VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1`.
+- Typed API client native `fetch` di `src/lib/api-client.ts`.
+- Error wrapper aman di `src/lib/api-error.ts`.
+- Token storage terpusat di `src/lib/auth-storage.ts` memakai `localStorage`.
+- Type DTO frontend untuk auth, pagination, field, dan project.
+- Service layer frontend `auth-service`, `field-service`, dan `project-service`.
+- `AuthContext` dengan `user`, `token`, `isAuthenticated`, `isLoading`, `login`, `register`, `logout`, dan `refreshProfile`.
+- Login dan register memakai endpoint backend nyata.
+- App startup membaca token tersimpan dan memvalidasi lewat `/auth/me`.
+- Navbar memakai user aktif, role, avatar inisial, dan logout nyata.
+- Daftar/detail bidang memakai `/fields`.
+- CRUD bidang admin memakai API, termasuk aktivasi/nonaktif dan handling error delete 409 dari backend.
+- Beranda memakai daftar bidang dan koleksi publik dari API.
+- Dashboard mahasiswa bagian “Koleksi Saya” memakai `/projects/me`.
+- Detail koleksi memakai `/projects/{id}`.
+- Form tambah/edit koleksi memakai `/projects` dan `/projects/{id}`.
+- Hapus koleksi memakai `DELETE /projects/{id}` dengan konfirmasi browser.
+- Test frontend untuk API client, AuthContext, fields page, collection detail owner permissions, dan smoke app.
+
+Halaman/area yang masih mock atau placeholder:
+
+- Upload PDF dan progress upload.
+- Daftar PDF pada detail koleksi.
+- Status indexing/re-index dari UI.
+- Search TF-IDF UI dan search history UI.
+- Dashboard admin selain CRUD bidang penelitian.
+- Statistik agregat repository yang belum memiliki endpoint khusus.
+
+Keputusan teknis:
+
+- Native `fetch` dipertahankan; Axios tidak ditambahkan.
+- State-based navigation tetap dipakai agar desain export tidak dirombak.
+- Tidak ada fallback diam-diam ke mock untuk area auth, fields, dan projects yang sudah terintegrasi.
+- Angka yang tidak tersedia dari API, seperti total PDF per bidang atau kontributor, ditampilkan sebagai tidak tersedia atau placeholder eksplisit, bukan data mock.
+- Token JWT disimpan di `localStorage` untuk MVP lokal; production perlu evaluasi cookie HttpOnly.
+
+Acceptance criteria Tahap 7A:
+
+- Login API terhubung.
+- Register API terhubung.
+- Token tersimpan terpusat dan refresh browser memvalidasi sesi.
+- Logout membersihkan token dan auth state.
+- Profil user aktif tampil di navbar dan dashboard.
+- Role admin/student dikenali UI.
+- Daftar dan detail bidang memakai API asli.
+- CRUD bidang admin memakai API asli.
+- Daftar, detail, create, update, delete koleksi memakai API asli.
+- Aksi edit/delete koleksi tampil hanya untuk owner/admin.
+- API error tampil sebagai error state/toast.
+- Mock tidak dipakai diam-diam pada area terintegrasi.
+- Desain visual tidak di-rebuild.
+
+Perintah verifikasi Tahap 7A:
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+python -m pytest
+
+cd ..
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```
+
+Rekomendasi Tahap 7B:
+
+- Integrasikan endpoint dokumen PDF ke detail koleksi dan dashboard.
+- Hubungkan upload multiple PDF ke backend multipart.
+- Tampilkan status indexing nyata dan tombol re-index owner/admin.
+- Integrasikan UI search TF-IDF global, filter bidang, filter koleksi, snippet, relevant pages, dan PDF open endpoint.
+- Tambahkan endpoint agregasi statistik bila dashboard membutuhkan angka repository nyata.

@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BookOpen, Mail, Lock, User, Hash, Users, Eye, EyeOff, ArrowRight, GraduationCap, FileText, Layers, Search, Shield } from "lucide-react";
 import { useApp } from "../context";
+import { useAuth } from "../../contexts/AuthContext";
+import { getSafeErrorMessage } from "../../lib/api-error";
 import { cn } from "./ui";
 import { toast } from "sonner";
 
 // ── Glass input ───────────────────────────────────────────────────────────────
 
 function GlassInput({
-  label, type = "text", placeholder, icon, trailingIcon, defaultValue, required, hint,
+  label, name, type = "text", placeholder, icon, trailingIcon, defaultValue, required, hint,
 }: {
   label: string; type?: string; placeholder: string;
+  name: string;
   icon?: React.ReactNode; trailingIcon?: React.ReactNode;
   defaultValue?: string; required?: boolean; hint?: string;
 }) {
@@ -23,6 +26,7 @@ function GlassInput({
           </div>
         )}
         <input
+          name={name}
           type={type}
           placeholder={placeholder}
           defaultValue={defaultValue}
@@ -47,9 +51,10 @@ function GlassInput({
 // ── Light input (for register form that's longer) ─────────────────────────────
 
 function LightInput({
-  label, type = "text", placeholder, icon, required, hint,
+  label, name, type = "text", placeholder, icon, required, hint,
 }: {
   label: string; type?: string; placeholder: string;
+  name: string;
   icon?: React.ReactNode; required?: boolean; hint?: string;
 }) {
   return (
@@ -62,6 +67,7 @@ function LightInput({
           </div>
         )}
         <input
+          name={name}
           type={type}
           placeholder={placeholder}
           required={required}
@@ -78,30 +84,67 @@ function LightInput({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function LoginPage() {
+export function LoginPage({ initialMode = "login" }: { initialMode?: "login" | "register" }) {
   const { navigate } = useApp();
+  const { login, register } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  function handleLogin(e: React.FormEvent) {
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
+
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "");
+
+    if (!email || !password) {
+      toast.error("Email dan kata sandi harus diisi.");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      toast.success("Selamat datang kembali, Arif! 👋");
+    try {
+      const user = await login({ email, password });
+      toast.success(`Selamat datang kembali, ${user.name.split(" ")[0]}!`);
       navigate({ name: "home" });
-    }, 1100);
+    } catch (error) {
+      toast.error(getSafeErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleRegister(e: React.FormEvent) {
+  async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const payload = {
+      name: String(form.get("name") || "").trim(),
+      student_number: String(form.get("student_number") || "").trim(),
+      email: String(form.get("email") || "").trim(),
+      password: String(form.get("password") || ""),
+      study_program: String(form.get("study_program") || "").trim(),
+      class_name: String(form.get("class_name") || "").trim(),
+    };
+
+    if (Object.values(payload).some((value) => !value)) {
+      toast.error("Lengkapi seluruh data registrasi terlebih dahulu.");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await register(payload);
       toast.success("Akun berhasil dibuat! Silakan masuk.");
       setMode("login");
-    }, 1300);
+    } catch (error) {
+      toast.error(getSafeErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
   const PREVIEW_PDFS = [
@@ -226,6 +269,7 @@ export function LoginPage() {
               <form onSubmit={handleLogin} className="flex flex-col gap-4">
                 <GlassInput
                   label="Alamat Email"
+                  name="email"
                   type="email"
                   placeholder="nama@mahasiswa.ac.id"
                   icon={<Mail className="w-4 h-4" />}
@@ -234,10 +278,11 @@ export function LoginPage() {
                 />
                 <GlassInput
                   label="Kata Sandi"
+                  name="password"
                   type={showPw ? "text" : "password"}
                   placeholder="Kata sandi kamu"
                   icon={<Lock className="w-4 h-4" />}
-                  defaultValue="password123"
+                  defaultValue="StudentDemo123!"
                   required
                   trailingIcon={
                     <button type="button" onClick={() => setShowPw(!showPw)} className="text-white/40 hover:text-white/70 transition-colors">
@@ -284,6 +329,7 @@ export function LoginPage() {
                 <div className="rounded-xl px-3.5 py-2.5 text-center" style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)" }}>
                   <p className="text-[11px] text-white/50 font-medium">
                     Demo: klik <strong className="text-white/70">Masuk ke Litera</strong> dengan data yang sudah terisi
+                    {" "}atau gunakan admin@litera.ac.id / AdminDemo123!
                   </p>
                 </div>
               </form>
@@ -293,18 +339,20 @@ export function LoginPage() {
               <form onSubmit={handleRegister} className="flex flex-col gap-3.5">
                 <LightInput
                   label="Nama Lengkap"
+                  name="name"
                   placeholder="Nama lengkap kamu"
                   icon={<User className="w-4 h-4" />}
                   required
                 />
                 <div className="grid grid-cols-2 gap-3">
-                  <LightInput label="NIM" placeholder="2021001234" icon={<Hash className="w-4 h-4" />} required />
-                  <LightInput label="Kelas" placeholder="TI-4A" icon={<Users className="w-4 h-4" />} required />
+                  <LightInput label="NIM" name="student_number" placeholder="2021001234" icon={<Hash className="w-4 h-4" />} required />
+                  <LightInput label="Kelas" name="class_name" placeholder="TI-4A" icon={<Users className="w-4 h-4" />} required />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold text-white/60 uppercase tracking-[0.1em]">Program Studi</label>
                   <select
+                    name="study_program"
                     className="w-full px-4 py-2.5 bg-white/15 border border-white/25 rounded-xl text-sm text-white focus:outline-none focus:bg-white/22 focus:border-white/50 transition-all appearance-none"
                     style={{ colorScheme: "dark" }}
                   >
@@ -314,8 +362,8 @@ export function LoginPage() {
                   </select>
                 </div>
 
-                <LightInput label="Alamat Email" type="email" placeholder="nama@mahasiswa.ac.id" icon={<Mail className="w-4 h-4" />} required />
-                <LightInput label="Kata Sandi" type="password" placeholder="Minimal 8 karakter" icon={<Lock className="w-4 h-4" />} required hint="Huruf, angka, dan simbol" />
+                <LightInput label="Alamat Email" name="email" type="email" placeholder="nama@mahasiswa.ac.id" icon={<Mail className="w-4 h-4" />} required />
+                <LightInput label="Kata Sandi" name="password" type="password" placeholder="Minimal 8 karakter" icon={<Lock className="w-4 h-4" />} required hint="Huruf, angka, dan simbol" />
 
                 <button
                   type="submit"

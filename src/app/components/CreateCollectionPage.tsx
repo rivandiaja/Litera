@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Plus, X, Globe, Lock, BookOpen, Lightbulb } from "lucide-react";
 import { useApp } from "../context";
 import { Button, InputField, TextareaField, cn } from "./ui";
-import { FIELDS } from "./data";
+import { getSafeErrorMessage } from "../../lib/api-error";
+import { adaptField, type FieldDisplay } from "../../lib/domain-display";
+import { fieldService } from "../../services/field-service";
+import { projectService } from "../../services/project-service";
 import { toast } from "sonner";
 
-export function CreateCollectionPage() {
+export function CreateCollectionPage({ projectId }: { projectId?: string }) {
   const { navigate } = useApp();
   const [title, setTitle] = useState("");
   const [fieldId, setFieldId] = useState("");
@@ -14,6 +17,44 @@ export function CreateCollectionPage() {
   const [kwInput, setKwInput] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [fields, setFields] = useState<FieldDisplay[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const isEditing = Boolean(projectId);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadFormData() {
+      setInitialLoading(true);
+      setLoadError(null);
+      try {
+        const [fieldResponse, projectResponse] = await Promise.all([
+          fieldService.list({ page_size: 100 }),
+          projectId ? projectService.get(Number(projectId)) : Promise.resolve(null),
+        ]);
+        if (!active) return;
+        setFields(fieldResponse.items.map(adaptField));
+        if (projectResponse) {
+          setTitle(projectResponse.title);
+          setFieldId(String(projectResponse.field.id));
+          setDescription(projectResponse.description);
+          setKeywords(projectResponse.keywords);
+          setIsPublic(projectResponse.visibility === "public");
+        }
+      } catch (error) {
+        if (active) setLoadError(getSafeErrorMessage(error));
+      } finally {
+        if (active) setInitialLoading(false);
+      }
+    }
+
+    loadFormData();
+    return () => {
+      active = false;
+    };
+  }, [projectId]);
 
   function addKeyword() {
     const kw = kwInput.trim();
@@ -23,19 +64,32 @@ export function CreateCollectionPage() {
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) { toast.error("Judul penelitian harus diisi"); return; }
     if (!fieldId) { toast.error("Pilih bidang penelitian terlebih dahulu"); return; }
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const payload = {
+        research_field_id: Number(fieldId),
+        title: title.trim(),
+        description: description.trim(),
+        keywords,
+        visibility: isPublic ? "public" as const : "private" as const,
+      };
+      const project = projectId
+        ? await projectService.update(Number(projectId), payload)
+        : await projectService.create(payload);
+      toast.success(projectId ? "Koleksi berhasil diperbarui." : "Koleksi berhasil dibuat.");
+      navigate({ name: "collection", collectionId: String(project.id) });
+    } catch (error) {
+      toast.error(getSafeErrorMessage(error));
+    } finally {
       setLoading(false);
-      toast.success("Koleksi berhasil dibuat! 🎉");
-      navigate({ name: "dashboard" });
-    }, 1200);
+    }
   }
 
-  const selectedField = FIELDS.find((f) => f.id === fieldId);
+  const selectedField = fields.find((f) => f.id === fieldId);
 
   return (
     <div className="min-h-screen bg-[#F5F4F1]">
@@ -50,19 +104,31 @@ export function CreateCollectionPage() {
             <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
               <BookOpen className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
             </div>
-            <span className="font-bold text-[#0C0D1A]">Buat Koleksi Baru</span>
+            <span className="font-bold text-[#0C0D1A]">{isEditing ? "Edit Koleksi" : "Buat Koleksi Baru"}</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate({ name: "dashboard" })}>Batal</Button>
             <Button size="sm" onClick={handleSubmit} loading={loading}>
               {!loading && <BookOpen className="w-3.5 h-3.5" />}
-              Simpan Koleksi
+              {isEditing ? "Simpan Perubahan" : "Simpan Koleksi"}
             </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+        {initialLoading && (
+          <div className="bg-white rounded-[1.25rem] border border-[rgba(12,13,26,0.07)] p-8 text-center text-sm text-slate-400">
+            Memuat form koleksi dari API...
+          </div>
+        )}
+        {!initialLoading && loadError && (
+          <div className="bg-white rounded-[1.25rem] border border-red-100 p-8 text-center">
+            <p className="text-sm font-semibold text-red-600 mb-4">{loadError}</p>
+            <Button onClick={() => navigate({ name: "dashboard" })}>Kembali ke Dashboard</Button>
+          </div>
+        )}
+        {!initialLoading && !loadError && (
         <form onSubmit={handleSubmit}>
           <div className="grid lg:grid-cols-3 gap-6">
 
@@ -96,7 +162,7 @@ export function CreateCollectionPage() {
               <div className="bg-white rounded-[1.25rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-6">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Bidang Penelitian</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {FIELDS.map((f) => (
+                  {fields.map((f) => (
                     <button
                       key={f.id}
                       type="button"
@@ -116,6 +182,9 @@ export function CreateCollectionPage() {
                     </button>
                   ))}
                 </div>
+                {fields.length === 0 && (
+                  <p className="text-xs text-slate-400 mt-3">Belum ada bidang aktif dari API.</p>
+                )}
               </div>
 
               {/* Keywords */}
@@ -226,6 +295,7 @@ export function CreateCollectionPage() {
             </div>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

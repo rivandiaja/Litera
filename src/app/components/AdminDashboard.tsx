@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   LayoutDashboard, Network, Users, BookOpen, FileText, Activity, Settings, LogOut,
   Plus, Search, Edit2, Trash2, X, Menu, Brain, Cpu, Database, BarChart2, Code2,
@@ -7,6 +7,10 @@ import {
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useApp } from "../context";
+import { useAuth } from "../../contexts/AuthContext";
+import { getSafeErrorMessage } from "../../lib/api-error";
+import { adaptField, type FieldDisplay } from "../../lib/domain-display";
+import { fieldService } from "../../services/field-service";
 import { Badge, Button, Avatar, InputField, TextareaField, StatusDot, cn } from "./ui";
 import { FIELDS, PDFS, COLLECTIONS, OWNERS } from "./data";
 import { toast } from "sonner";
@@ -29,15 +33,41 @@ const NAV_ITEMS: { id: Tab; label: string; icon: LucideIcon; badge?: number }[] 
 
 export function AdminDashboard() {
   const { navigate } = useApp();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [fieldModalOpen, setFieldModalOpen] = useState(false);
-  const [editingField, setEditingField] = useState<typeof FIELDS[0] | null>(null);
+  const [editingField, setEditingField] = useState<FieldDisplay | null>(null);
   const [fieldSearch, setFieldSearch] = useState("");
+  const [apiFields, setApiFields] = useState<FieldDisplay[]>([]);
+  const [fieldsLoading, setFieldsLoading] = useState(true);
+  const [fieldsError, setFieldsError] = useState<string | null>(null);
 
   const failedPdfs = PDFS.filter((p) => p.indexingStatus === "failed");
   const processingPdfs = PDFS.filter((p) => p.indexingStatus === "processing");
   const indexedPdfs = PDFS.filter((p) => p.indexingStatus === "indexed");
+
+  const loadFields = useCallback(async () => {
+    setFieldsLoading(true);
+    setFieldsError(null);
+    try {
+      const response = await fieldService.list({ page_size: 100, include_inactive: true, search: fieldSearch || undefined });
+      setApiFields(response.items.map(adaptField));
+    } catch (error) {
+      setFieldsError(getSafeErrorMessage(error));
+    } finally {
+      setFieldsLoading(false);
+    }
+  }, [fieldSearch]);
+
+  useEffect(() => {
+    loadFields();
+  }, [loadFields]);
+
+  function handleLogout() {
+    logout();
+    navigate({ name: "login" });
+  }
 
   function SidebarContent() {
     return (
@@ -91,12 +121,12 @@ export function AdminDashboard() {
               <Shield className="w-3.5 h-3.5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white leading-none">Administrator</p>
-              <p className="text-[10px] text-slate-500 mt-0.5 truncate">admin@litera.ac.id</p>
+              <p className="text-sm font-semibold text-white leading-none">{user?.name || "Administrator"}</p>
+              <p className="text-[10px] text-slate-500 mt-0.5 truncate">{user?.email || "admin@litera.ac.id"}</p>
             </div>
           </div>
           <button
-            onClick={() => navigate({ name: "login" })}
+            onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:bg-white/[0.06] hover:text-red-400 transition-all"
           >
             <LogOut className="w-4 h-4" />
@@ -236,9 +266,7 @@ export function AdminDashboard() {
   // ── Fields ──────────────────────────────────────────────────────────────────
 
   function FieldsTab() {
-    const filtered = fieldSearch
-      ? FIELDS.filter((f) => f.name.toLowerCase().includes(fieldSearch.toLowerCase()))
-      : FIELDS;
+    const filtered = apiFields;
 
     return (
       <div>
@@ -246,7 +274,7 @@ export function AdminDashboard() {
           <div>
             <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">Manajemen</p>
             <h2 className="text-2xl font-bold text-[#0C0D1A] tracking-tight">Bidang Penelitian</h2>
-            <p className="text-sm text-slate-500 mt-1">{FIELDS.length} bidang terdaftar di platform</p>
+            <p className="text-sm text-slate-500 mt-1">{apiFields.length} bidang terdaftar di platform</p>
           </div>
           <Button onClick={() => { setEditingField(null); setFieldModalOpen(true); }}>
             <Plus className="w-4 h-4" />
@@ -264,6 +292,18 @@ export function AdminDashboard() {
           />
         </div>
 
+        {fieldsLoading && (
+          <div className="bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] p-8 text-center text-sm text-slate-400">
+            Memuat bidang penelitian dari API...
+          </div>
+        )}
+        {!fieldsLoading && fieldsError && (
+          <div className="bg-white rounded-[1.125rem] border border-red-100 p-8 text-center">
+            <p className="text-sm font-semibold text-red-600 mb-4">{fieldsError}</p>
+            <Button onClick={loadFields}>Coba Lagi</Button>
+          </div>
+        )}
+        {!fieldsLoading && !fieldsError && (
         <div className="flex flex-col gap-3">
           {filtered.map((field) => {
             const IconComp = ICON_MAP[field.iconName] || Network;
@@ -275,14 +315,13 @@ export function AdminDashboard() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-sm text-[#0C0D1A]">{field.name}</h3>
+                    {!field.isActive && <Badge variant="warning">Nonaktif</Badge>}
                   </div>
                   <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{field.description}</p>
                   <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-400">
                     <span className="font-medium">{field.collectionCount} koleksi</span>
                     <span className="opacity-40">·</span>
-                    <span>{field.pdfCount} PDF</span>
-                    <span className="opacity-40">·</span>
-                    <span>{field.contributors} kontributor</span>
+                    <span>PDF belum terhubung</span>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1 max-w-[180px] hidden sm:flex">
@@ -299,7 +338,16 @@ export function AdminDashboard() {
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={() => toast.success(`Bidang "${field.name}" dihapus (simulasi)`)}
+                    onClick={async () => {
+                      if (!window.confirm(`Hapus bidang "${field.name}"?`)) return;
+                      try {
+                        await fieldService.remove(field.apiId);
+                        toast.success("Bidang penelitian berhasil dihapus.");
+                        await loadFields();
+                      } catch (error) {
+                        toast.error(getSafeErrorMessage(error));
+                      }
+                    }}
                     className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
                     title="Hapus"
                   >
@@ -310,6 +358,7 @@ export function AdminDashboard() {
             );
           })}
         </div>
+        )}
       </div>
     );
   }
@@ -645,31 +694,61 @@ export function AdminDashboard() {
             </div>
             <div className="p-6">
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
-                  toast.success(editingField ? `Bidang "${editingField.name}" berhasil diperbarui!` : "Bidang baru berhasil ditambahkan!");
-                  setFieldModalOpen(false);
+                  const form = new FormData(e.currentTarget);
+                  const payload = {
+                    name: String(form.get("name") || "").trim(),
+                    description: String(form.get("description") || "").trim(),
+                    icon: String(form.get("icon") || "BookOpen").trim(),
+                    is_active: form.get("is_active") === "on",
+                  };
+                  if (!payload.name) {
+                    toast.error("Nama bidang wajib diisi.");
+                    return;
+                  }
+                  try {
+                    if (editingField) {
+                      await fieldService.update(editingField.apiId, payload);
+                      toast.success("Bidang penelitian berhasil diperbarui.");
+                    } else {
+                      await fieldService.create(payload);
+                      toast.success("Bidang penelitian berhasil ditambahkan.");
+                    }
+                    setFieldModalOpen(false);
+                    setEditingField(null);
+                    await loadFields();
+                  } catch (error) {
+                    toast.error(getSafeErrorMessage(error));
+                  }
                 }}
                 className="flex flex-col gap-4"
               >
                 <InputField
                   label="Nama Bidang"
+                  name="name"
                   placeholder="Contoh: Jaringan Komputer"
                   defaultValue={editingField?.name}
                   required
                 />
                 <TextareaField
                   label="Deskripsi"
+                  name="description"
                   placeholder="Deskripsi singkat bidang penelitian ini..."
                   defaultValue={editingField?.description}
                   rows={3}
                 />
                 <InputField
-                  label="Kata Kunci"
-                  placeholder="SNMP, OLT, Bandwidth, Monitoring..."
-                  defaultValue={editingField?.keywords.join(", ")}
-                  hint="Pisahkan dengan koma"
+                  label="Ikon"
+                  name="icon"
+                  placeholder="Network, Brain, Cpu, Database..."
+                  defaultValue={editingField?.iconName || "BookOpen"}
+                  hint="Gunakan nama ikon Lucide yang sudah dipakai desain."
                 />
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <input type="checkbox" name="is_active" defaultChecked={editingField?.isActive ?? true} className="w-4 h-4 rounded accent-indigo-600" />
+                  Bidang aktif
+                </label>
                 <div className="flex gap-3 pt-2">
                   <Dialog.Close asChild>
                     <Button type="button" variant="outline" className="flex-1">Batal</Button>

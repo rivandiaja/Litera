@@ -1,10 +1,22 @@
 import { useState } from "react";
 import { BookOpen, Search, Bell, ChevronDown, Upload, Menu, X, LayoutDashboard, Shield, LogOut, Home, Compass, FolderOpen, Info } from "lucide-react";
 import { useApp } from "../context";
+import { useAuth } from "../../contexts/AuthContext";
 import { Button, Avatar, cn } from "./ui";
+
+function getInitials(name?: string) {
+  if (!name) return "LT";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "LT";
+}
 
 export function Navbar({ transparent = false }: { transparent?: boolean }) {
   const { navigate, setShowUploadModal } = useApp();
+  const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -21,6 +33,16 @@ export function Navbar({ transparent = false }: { transparent?: boolean }) {
     e.preventDefault();
     if (searchQuery.trim()) { navigate({ name: "search", query: searchQuery }); setSearchOpen(false); }
   }
+
+  function handleLogout() {
+    logout();
+    setAvatarOpen(false);
+    setMobileOpen(false);
+    navigate({ name: "login" });
+  }
+
+  const firstName = user?.name.split(" ")[0] || "Pengguna";
+  const initials = getInitials(user?.name);
 
   return (
     <nav className={cn(
@@ -90,8 +112,8 @@ export function Navbar({ transparent = false }: { transparent?: boolean }) {
               onClick={() => setAvatarOpen(!avatarOpen)}
               className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-100 transition-all"
             >
-              <Avatar initials="AB" color="bg-indigo-500" size="sm" />
-              <span className="hidden sm:block text-sm font-semibold text-slate-700 leading-none">Arif</span>
+              <Avatar initials={initials} color="bg-indigo-500" size="sm" />
+              <span className="hidden sm:block text-sm font-semibold text-slate-700 leading-none">{firstName}</span>
               <ChevronDown className={cn("w-3.5 h-3.5 text-slate-400 transition-transform duration-200", avatarOpen && "rotate-180")} />
             </button>
             {avatarOpen && (
@@ -99,13 +121,14 @@ export function Navbar({ transparent = false }: { transparent?: boolean }) {
                 <div className="fixed inset-0 z-40" onClick={() => setAvatarOpen(false)} />
                 <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-[rgba(12,13,26,0.08)] shadow-xl shadow-slate-200/60 overflow-hidden z-50">
                   <div className="px-4 py-3.5 border-b border-[rgba(12,13,26,0.07)] bg-slate-50/50">
-                    <p className="text-sm font-bold text-slate-900">Arif Budiman</p>
-                    <p className="text-xs text-slate-400 mt-0.5">arif@mahasiswa.ac.id</p>
+                    <p className="text-sm font-bold text-slate-900">{user?.name || "Pengguna Litera"}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{user?.email || "Belum login"}</p>
+                    {user && <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">{user.role}</p>}
                   </div>
                   {[
-                    { label: "Dashboard Mahasiswa", icon: LayoutDashboard, action: () => navigate({ name: "dashboard" }) },
-                    { label: "Panel Admin", icon: Shield, action: () => navigate({ name: "admin" }) },
-                  ].map((item) => (
+                    { label: "Dashboard Mahasiswa", icon: LayoutDashboard, action: () => navigate({ name: "dashboard" }), show: true },
+                    { label: "Panel Admin", icon: Shield, action: () => navigate({ name: "admin" }), show: user?.role === "admin" },
+                  ].filter((item) => item.show).map((item) => (
                     <button key={item.label} onClick={() => { item.action(); setAvatarOpen(false); }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
                       <item.icon className="w-4 h-4 text-slate-400" />
@@ -113,7 +136,7 @@ export function Navbar({ transparent = false }: { transparent?: boolean }) {
                     </button>
                   ))}
                   <div className="border-t border-[rgba(12,13,26,0.07)]">
-                    <button onClick={() => { navigate({ name: "login" }); setAvatarOpen(false); }}
+                    <button onClick={handleLogout}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors text-left">
                       <LogOut className="w-4 h-4" />
                       Keluar

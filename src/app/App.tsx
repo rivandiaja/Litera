@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import { AppContext, type Page } from "./context";
+import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { LoginPage } from "./components/LoginPage";
 import { HomePage } from "./components/HomePage";
 import { SearchResultsPage } from "./components/SearchResultsPage";
@@ -15,10 +16,29 @@ export default function App() {
   /* MARKER-MAKE-KIT-INVOKED */
   /* MARKER-MAKE-KIT-DISCOVERY-READ */
 
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
+  );
+}
+
+function AppShell() {
   const [page, setPage] = useState<Page>({ name: "login" });
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadTargetCollectionId, setUploadTargetCollectionId] = useState<string | undefined>();
-  const [isAdmin] = useState(true);
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const isAdmin = user?.role === "admin";
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated && page.name !== "login" && page.name !== "register") {
+      setPage({ name: "login" });
+    }
+    if (isAuthenticated && (page.name === "login" || page.name === "register")) {
+      setPage({ name: "home" });
+    }
+  }, [isAuthenticated, isLoading, page.name]);
 
   function navigate(p: Page) {
     setPage(p);
@@ -29,7 +49,7 @@ export default function App() {
     switch (page.name) {
       case "login":
       case "register":
-        return <LoginPage />;
+        return <LoginPage initialMode={page.name} />;
       case "home":
         return <HomePage />;
       case "search":
@@ -43,7 +63,7 @@ export default function App() {
       case "dashboard":
         return <StudentDashboard />;
       case "create-collection":
-        return <CreateCollectionPage />;
+        return <CreateCollectionPage projectId={page.projectId} />;
       case "admin":
         return <AdminDashboard />;
       default:
@@ -63,8 +83,14 @@ export default function App() {
         isAdmin,
       }}
     >
-      {renderPage()}
-      <UploadModal />
+      {isLoading ? (
+        <div className="min-h-screen bg-[#F5F4F1] flex items-center justify-center">
+          <div className="bg-white rounded-[1.25rem] border border-[rgba(12,13,26,0.07)] px-6 py-5 shadow-sm">
+            <p className="text-sm font-semibold text-slate-700">Memuat sesi Litera...</p>
+          </div>
+        </div>
+      ) : renderPage()}
+      {isAuthenticated && <UploadModal />}
       <Toaster
         position="bottom-right"
         toastOptions={{

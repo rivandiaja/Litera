@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Search, ChevronDown, BookOpen, ArrowRight,
   Network, Brain, Cpu, Database, BarChart2, Code2, FileText, Upload,
@@ -7,7 +7,10 @@ import {
 import { useApp } from "../context";
 import { Navbar } from "./Navbar";
 import { Badge, Avatar, cn, type BadgeVariant } from "./ui";
-import { FIELDS, COLLECTIONS } from "./data";
+import { fieldService } from "../../services/field-service";
+import { projectService } from "../../services/project-service";
+import { getSafeErrorMessage } from "../../lib/api-error";
+import { adaptField, adaptProject, type FieldDisplay, type ProjectDisplay } from "../../lib/domain-display";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Network, Brain, Cpu, Database, BarChart2, Code2,
@@ -44,6 +47,37 @@ export function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [fieldOpen, setFieldOpen] = useState(false);
   const [selectedField, setSelectedField] = useState("Semua Bidang");
+  const [fields, setFields] = useState<FieldDisplay[]>([]);
+  const [collections, setCollections] = useState<ProjectDisplay[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadHomeData() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const [fieldResponse, projectResponse] = await Promise.all([
+          fieldService.list({ page_size: 6 }),
+          projectService.list({ page_size: 6, visibility: "public", sort_by: "newest" }),
+        ]);
+        if (!active) return;
+        setFields(fieldResponse.items.map(adaptField));
+        setCollections(projectResponse.items.map(adaptProject));
+      } catch (err) {
+        if (active) setError(getSafeErrorMessage(err));
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    }
+
+    loadHomeData();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -114,7 +148,7 @@ export function HomePage() {
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setFieldOpen(false)} />
                         <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl border border-[rgba(12,13,26,0.08)] shadow-2xl shadow-black/20 z-20 overflow-hidden py-1.5">
-                          {["Semua Bidang", ...FIELDS.map((f) => f.name)].map((f) => (
+                          {["Semua Bidang", ...fields.map((f) => f.name)].map((f) => (
                             <button key={f} onClick={() => { setSelectedField(f); setFieldOpen(false); }}
                               className={cn("w-full text-left px-4 py-2 text-sm transition-colors",
                                 selectedField === f
@@ -153,10 +187,10 @@ export function HomePage() {
               {/* Stats */}
               <div className="grid grid-cols-4 gap-6 mt-10 pt-8" style={{ borderTop: "1px solid rgba(255,255,255,0.4)" }}>
                 {[
-                  { val: "1.248", lbl: "Literatur PDF" },
-                  { val: "186", lbl: "Koleksi" },
-                  { val: "8", lbl: "Bidang Ilmu" },
-                  { val: "74", lbl: "Kontributor" },
+                  { val: "—", lbl: "Literatur PDF" },
+                  { val: String(collections.length), lbl: "Koleksi" },
+                  { val: String(fields.length), lbl: "Bidang Ilmu" },
+                  { val: "—", lbl: "Kontributor" },
                 ].map(({ val, lbl }) => (
                   <div key={lbl}>
                     <p className="text-[1.75rem] font-bold text-[#0C0D1A] tracking-[-0.03em] leading-none">{val}</p>
@@ -223,7 +257,17 @@ export function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5">
-          {FIELDS.map((field, idx) => {
+          {isLoading && (
+            <div className="lg:col-span-12 bg-white border border-[rgba(12,13,26,0.07)] rounded-[1.25rem] p-8 text-center text-sm text-slate-400">
+              Memuat bidang penelitian dari API...
+            </div>
+          )}
+          {!isLoading && error && (
+            <div className="lg:col-span-12 bg-white border border-red-100 rounded-[1.25rem] p-8 text-center">
+              <p className="text-sm font-semibold text-red-600">{error}</p>
+            </div>
+          )}
+          {!isLoading && !error && fields.map((field, idx) => {
             const IconComp = ICON_MAP[field.iconName] || BookOpen;
             const ac = FIELD_ACCENT[field.id] || FIELD_ACCENT["rpl"];
 
@@ -263,7 +307,7 @@ export function HomePage() {
                 {/* Wide featured card gets a stat strip */}
                 {idx === 0 && (
                   <div className="absolute top-5 right-5 text-right">
-                    <p className="text-[2.5rem] font-bold text-white/[0.06] leading-none tracking-tight">{field.pdfCount}</p>
+                    <p className="text-[2.5rem] font-bold text-white/[0.06] leading-none tracking-tight">—</p>
                     <p className="text-[9px] font-semibold text-slate-700 uppercase tracking-widest -mt-1">PDF</p>
                   </div>
                 )}
@@ -305,7 +349,7 @@ export function HomePage() {
                     <div className={cn("flex items-center gap-4 text-[11px] font-medium", isDark ? "text-slate-600" : "text-slate-400")}>
                       <span>{field.collectionCount} koleksi</span>
                       <span className="opacity-40">·</span>
-                      <span>{field.contributors} kontrib.</span>
+                      <span>{field.isActive ? "Aktif" : "Nonaktif"}</span>
                     </div>
                     <div className={cn(
                       "w-8 h-8 rounded-full flex items-center justify-center transition-all group-hover:scale-110",
@@ -336,14 +380,19 @@ export function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {COLLECTIONS.map((col) => {
-            const stripColor = COLLECTION_STRIP[col.fieldId] || "bg-slate-400";
-            const badgeVariant: BadgeVariant = col.fieldId === "jaringan-komputer" ? "indigo"
-              : col.fieldId === "artificial-intelligence" ? "lavender"
-              : col.fieldId === "iot" ? "mint"
-              : col.fieldId === "sistem-informasi" ? "sky"
-              : col.fieldId === "data-mining" ? "coral"
-              : "rose";
+          {isLoading && (
+            <div className="sm:col-span-2 lg:col-span-3 bg-white rounded-[1.25rem] border border-[rgba(12,13,26,0.07)] p-8 text-center text-sm text-slate-400">
+              Memuat koleksi terbaru dari API...
+            </div>
+          )}
+          {!isLoading && !error && collections.length === 0 && (
+            <div className="sm:col-span-2 lg:col-span-3 bg-white rounded-[1.25rem] border border-[rgba(12,13,26,0.07)] p-8 text-center text-sm text-slate-400">
+              Belum ada koleksi publik.
+            </div>
+          )}
+          {!isLoading && !error && collections.map((col) => {
+            const stripColor = col.strip || COLLECTION_STRIP[col.fieldSlug] || "bg-slate-400";
+            const badgeVariant: BadgeVariant = col.badge;
 
             return (
               <div

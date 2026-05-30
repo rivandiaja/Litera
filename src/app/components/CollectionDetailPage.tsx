@@ -1,22 +1,53 @@
-import { useState } from "react";
-import { Search, Upload, Share2, FileText, ChevronRight, Globe, Lock, Clock, BookOpen, AlertTriangle, MoreHorizontal, Download, CheckCircle2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Search, Upload, Share2, FileText, ChevronRight, Globe, Lock, Clock, BookOpen, AlertTriangle, MoreHorizontal, Download, CheckCircle2, Edit2, Trash2 } from "lucide-react";
 import { useApp } from "../context";
+import { useAuth } from "../../contexts/AuthContext";
+import { getSafeErrorMessage } from "../../lib/api-error";
+import { adaptProject, type ProjectDisplay } from "../../lib/domain-display";
+import { projectService } from "../../services/project-service";
 import { Navbar } from "./Navbar";
 import { Avatar, Button, StatusDot, cn } from "./ui";
-import { COLLECTIONS, PDFS, FIELDS } from "./data";
 import { toast } from "sonner";
 
 type StatusFilter = "all" | "indexed" | "pending" | "processing" | "failed";
+type PdfListItem = {
+  id: string;
+  title: string;
+  pages: number;
+  uploadedAt: string;
+  indexingStatus: Exclude<StatusFilter, "all">;
+  size: string;
+  failReason?: string;
+};
 
 export function CollectionDetailPage({ collectionId }: { collectionId: string }) {
   const { navigate, setShowUploadModal, setUploadTargetCollectionId } = useApp();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
   const [copied, setCopied] = useState(false);
+  const [collection, setCollection] = useState<ProjectDisplay | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const collection = COLLECTIONS.find((c) => c.id === collectionId) ?? COLLECTIONS[0];
-  const field = FIELDS.find((f) => f.id === collection.fieldId);
-  const allPdfs = PDFS.filter((p) => p.collectionId === collection.id);
+  const loadCollection = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await projectService.get(Number(collectionId));
+      setCollection(adaptProject(response));
+    } catch (err) {
+      setError(getSafeErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [collectionId]);
+
+  useEffect(() => {
+    loadCollection();
+  }, [loadCollection]);
+
+  const allPdfs: PdfListItem[] = [];
 
   const filteredPdfs = allPdfs.filter((p) => {
     const matchSearch = !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -32,13 +63,49 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
     failed: allPdfs.filter((p) => p.indexingStatus === "failed").length,
   };
 
-  const isOwner = collection.owner.id === "u1";
+  const isOwner = Boolean(collection && user && (user.role === "admin" || collection.owner.id === user.id));
   const indexProgress = allPdfs.length ? Math.round((counts.indexed / allPdfs.length) * 100) : 0;
 
   function handleShare() {
     setCopied(true);
     toast.success("Tautan koleksi disalin!");
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleDelete() {
+    if (!collection || !window.confirm(`Hapus koleksi "${collection.title}"?`)) return;
+    try {
+      await projectService.remove(collection.apiId);
+      toast.success("Koleksi berhasil dihapus.");
+      navigate({ name: "dashboard" });
+    } catch (err) {
+      toast.error(getSafeErrorMessage(err));
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F5F4F1]">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 text-center text-sm text-slate-400">
+          Memuat detail koleksi dari API...
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !collection) {
+    return (
+      <div className="min-h-screen bg-[#F5F4F1]">
+        <Navbar />
+        <div className="max-w-xl mx-auto px-4 sm:px-6 py-16 text-center">
+          <div className="bg-white rounded-[1.25rem] border border-red-100 p-8">
+            <p className="text-sm font-semibold text-red-600 mb-4">{error || "Koleksi tidak ditemukan."}</p>
+            <Button onClick={loadCollection}>Coba Lagi</Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -57,12 +124,8 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
           <div className="flex items-center gap-2 text-xs font-medium text-indigo-900/50 mb-5">
             <button onClick={() => navigate({ name: "home" })} className="hover:text-indigo-900/80 transition-colors">Beranda</button>
             <ChevronRight className="w-3.5 h-3.5" />
-            {field && (
-              <>
-                <button onClick={() => navigate({ name: "field-detail", fieldId: field.id })} className="hover:text-indigo-900/80 transition-colors">{field.name}</button>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </>
-            )}
+            <button onClick={() => navigate({ name: "field-detail", fieldId: collection.fieldId })} className="hover:text-indigo-900/80 transition-colors">{collection.fieldName}</button>
+            <ChevronRight className="w-3.5 h-3.5" />
             <span className="text-indigo-900/75 font-semibold line-clamp-1 max-w-xs">{collection.title}</span>
           </div>
 
@@ -79,7 +142,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                 </span>
               </div>
               <h1 className="text-2xl font-bold text-[#0C0D1A] tracking-tight leading-snug max-w-xl">{collection.title}</h1>
-              <p className="text-sm text-indigo-900/60 mt-1.5 font-medium">{collection.owner.name} · {collection.owner.prodi}</p>
+              <p className="text-sm text-indigo-900/60 mt-1.5 font-medium">{collection.owner.name} · {collection.owner.email}</p>
             </div>
 
             {/* Stats pills */}
@@ -113,7 +176,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                 <Avatar initials={collection.owner.initials} color={collection.owner.avatarColor} size="md" />
                 <div>
                   <p className="font-semibold text-slate-900 text-sm">{collection.owner.name}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{collection.owner.prodi} · {collection.owner.kelas} · {collection.owner.nim}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{collection.owner.email} · NIM {collection.owner.nim}</p>
                 </div>
               </div>
 
@@ -142,6 +205,18 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                   <Button variant="secondary" onClick={() => { setUploadTargetCollectionId(collection.id); setShowUploadModal(true); }}>
                     <Upload className="w-4 h-4" />
                     Unggah PDF
+                  </Button>
+                )}
+                {isOwner && (
+                  <Button variant="outline" onClick={() => navigate({ name: "create-collection", projectId: collection.id })}>
+                    <Edit2 className="w-4 h-4" />
+                    Edit Koleksi
+                  </Button>
+                )}
+                {isOwner && (
+                  <Button variant="danger" onClick={handleDelete}>
+                    <Trash2 className="w-4 h-4" />
+                    Hapus
                   </Button>
                 )}
               </div>
@@ -250,7 +325,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                 {filteredPdfs.length === 0 && (
                   <div className="text-center py-12 text-slate-400 text-sm bg-white rounded-2xl border border-[rgba(12,13,26,0.07)]">
                     <FileText className="w-8 h-8 text-slate-200 mx-auto mb-2" strokeWidth={1.5} />
-                    Tidak ada PDF yang cocok
+                    Daftar PDF belum diintegrasikan pada Tahap 7A
                   </div>
                 )}
               </div>
@@ -301,8 +376,8 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                 {[
                   ["Dibuat", collection.createdAt],
                   ["Diperbarui", collection.lastUpdated],
-                  ["Program Studi", collection.owner.prodi],
-                  ["Kelas", collection.owner.kelas],
+                  ["Email", collection.owner.email],
+                  ["NIM", collection.owner.nim],
                 ].map(([k, v]) => (
                   <div key={k} className="flex items-center justify-between gap-2">
                     <span className="text-xs text-slate-400 font-medium">{k}</span>
