@@ -26,5 +26,10 @@ backend/*.db
 backend/*.sqlite
 backend/*.sqlite3
 
+demo-data/manifest.json
+demo-data/relevance-judgments.json
+demo-data/pdfs/*
+!demo-data/pdfs/.gitkeep
+
 .DS_Store
 Thumbs.db

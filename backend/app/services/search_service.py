@@ -151,6 +151,7 @@ def search_documents(
     research_field_id: int | None = None,
     research_project_id: int | None = None,
     owner_id: int | None = None,
+    save_history: bool = True,
 ) -> SearchResponse:
     normalized_query, processed_terms, unique_terms = _prepare_query(query)
     _validate_filters(db, current_user, research_field_id, research_project_id, owner_id)
@@ -164,7 +165,8 @@ def search_documents(
 
     terms = db.scalars(select(IndexTerm).where(IndexTerm.term.in_(unique_terms))).all()
     if not terms or total_scoped_documents == 0:
-        _save_history(db, current_user, normalized_query, filters, 0)
+        if save_history:
+            _save_history(db, current_user, normalized_query, filters, 0)
         return SearchResponse(
             query=normalized_query,
             processed_terms=unique_terms,
@@ -183,7 +185,8 @@ def search_documents(
     ).all()
 
     if not postings:
-        _save_history(db, current_user, normalized_query, filters, 0)
+        if save_history:
+            _save_history(db, current_user, normalized_query, filters, 0)
         return SearchResponse(
             query=normalized_query,
             processed_terms=unique_terms,
@@ -207,7 +210,8 @@ def search_documents(
     scored_document_ids = [document_id for document_id, score in scores.items() if score > 0]
 
     if not scored_document_ids:
-        _save_history(db, current_user, normalized_query, filters, 0)
+        if save_history:
+            _save_history(db, current_user, normalized_query, filters, 0)
         return SearchResponse(
             query=normalized_query,
             processed_terms=unique_terms,
@@ -296,7 +300,8 @@ def search_documents(
             )
         )
 
-    _save_history(db, current_user, normalized_query, filters, total_items)
+    if save_history:
+        _save_history(db, current_user, normalized_query, filters, total_items)
     return SearchResponse(
         query=normalized_query,
         processed_terms=unique_terms,

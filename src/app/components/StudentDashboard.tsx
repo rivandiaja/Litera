@@ -219,10 +219,12 @@ export function StudentDashboard() {
               <h1 className="text-xl font-bold text-white tracking-tight mb-1">Selamat datang, {user?.name.split(" ")[0] || "mahasiswa"}</h1>
               <p className="text-slate-500 text-sm">Berikut ringkasan aktivitas penelitianmu hari ini.</p>
             </div>
-            <Button size="sm" variant="white" onClick={() => setShowUploadModal(true)} className="hidden sm:flex shrink-0">
-              <Upload className="w-3.5 h-3.5" strokeWidth={2} />
-              Unggah PDF
-            </Button>
+            <div className="hidden sm:block shrink-0">
+              <Button size="sm" variant="white" onClick={() => setShowUploadModal(true)}>
+                <Upload className="w-3.5 h-3.5" strokeWidth={2} />
+                Unggah PDF
+              </Button>
+            </div>
           </div>
         </div>
 

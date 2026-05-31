@@ -45,6 +45,57 @@ Seed bersifat idempotent dan dapat dijalankan berulang.
 python -m app.services.seed
 ```
 
+## Import Dataset Demo Lokal
+
+Dataset aktual diletakkan di root repository pada `demo-data/`, bukan di folder backend. PDF aktual di `demo-data/pdfs/` diabaikan Git.
+
+Dry-run aman:
+
+```powershell
+python -m app.cli.import_demo_dataset --manifest ../demo-data/manifest.example.json --dry-run
+```
+
+Import dataset lokal:
+
+```powershell
+python -m app.cli.import_demo_dataset --manifest ../demo-data/manifest.json
+```
+
+Re-copy dan re-index dokumen yang sudah ada berdasarkan `original_filename`:
+
+```powershell
+python -m app.cli.import_demo_dataset --manifest ../demo-data/manifest.json --reindex-existing
+```
+
+Helper ini:
+
+- membaca manifest JSON;
+- memastikan user, bidang, dan project tersedia;
+- menyalin PDF lokal ke `backend/uploads/`;
+- membuat metadata dokumen;
+- menjalankan indexing sinkron;
+- idempotent agar tidak membuat duplikat;
+- memberi pesan aman untuk file hilang atau PDF gagal ekstraksi;
+- tidak menampilkan traceback mentah pada output normal.
+
+## Evaluasi Information Retrieval
+
+Evaluator memakai search service backend langsung dan tidak mencatat search history.
+
+```powershell
+python -m app.cli.evaluate_ir --judgments ../demo-data/relevance-judgments.json --k 5
+```
+
+Metric yang dihitung:
+
+- Precision@K.
+- Recall@K jika ground truth tersedia.
+- jumlah hasil retrieved.
+- posisi dokumen relevan.
+- processed query terms.
+- elapsed time per query.
+- Mean Precision@K, Mean Recall@K, dan average elapsed time.
+
 ## Menjalankan API
 
 ```powershell
@@ -293,3 +344,9 @@ Pesan kegagalan indexing yang berpotensi berisi traceback mentah disanitasi sebe
 - Audit log tabel terpisah untuk activity lengkap.
 - Dataset demo besar 20-50 PDF.
 - Endpoint persistence untuk pengaturan platform admin.
+
+## Dokumentasi Terkait
+
+- Metode IR: `../docs/IR_METHOD.md`.
+- Panduan demo: `../docs/DEMO_GUIDE.md`.
+- Checklist penyerahan: `../docs/SUBMISSION_CHECKLIST.md`.

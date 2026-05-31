@@ -1103,3 +1103,101 @@ Rekomendasi Tahap 8B:
 - Tambahkan verifikasi browser end-to-end lintas role dengan data seed yang stabil.
 - Pertimbangkan endpoint konfigurasi admin bila tab pengaturan ingin dibuat persisten.
 - Poles empty state dan responsive QA tanpa mengubah bahasa visual Figma Make.
+
+## 26. Progress Tahap 8B
+
+Status: selesai untuk finalisasi dataset demo, helper import, evaluator IR, dokumentasi akademik, panduan demo, checklist penyerahan, dan hardening akhir tanpa mengubah desain visual frontend.
+
+Yang ditambahkan:
+
+- Folder `demo-data/` dengan `README.md`, `manifest.example.json`, `relevance-judgments.example.json`, dan `pdfs/.gitkeep`.
+- Aturan `.gitignore` untuk menjaga PDF aktual, `manifest.json`, dan `relevance-judgments.json` lokal tidak masuk Git.
+- CLI `backend/app/cli/import_demo_dataset.py`.
+- CLI `backend/app/cli/evaluate_ir.py`.
+- Dokumentasi `docs/IR_METHOD.md`.
+- Dokumentasi `docs/DEMO_GUIDE.md`.
+- Dokumentasi `docs/SUBMISSION_CHECKLIST.md`.
+- Test backend untuk import manifest, dry-run, file missing, idempotent import, reindex existing, failed PDF, Precision@K, Recall@K, dan output evaluasi.
+
+Helper import dataset:
+
+- Membaca manifest JSON lokal.
+- Memastikan user, bidang, dan project demo tersedia.
+- Menyalin PDF dari `demo-data/pdfs/` ke `backend/uploads/`.
+- Membuat metadata dokumen.
+- Menjalankan indexing sinkron melalui service indexing existing.
+- Idempotent berdasarkan user email, field name/slug, project owner/title, dan document `original_filename`.
+- Mendukung `--dry-run`.
+- Mendukung `--reindex-existing`.
+- Memberikan pesan aman untuk file hilang, PDF invalid, dan PDF gagal ekstraksi.
+- Tidak menampilkan traceback mentah pada output normal.
+
+Evaluator IR:
+
+- Membaca `relevance-judgments.json`.
+- Memakai search service backend langsung, bukan HTTP request.
+- Memanggil search dengan `save_history=False` agar evaluasi tidak mengotori riwayat pencarian user.
+- Menghitung Precision@K dan Recall@K.
+- Menampilkan processed query terms, jumlah hasil, posisi dokumen relevan, elapsed time, Mean Precision@K, Mean Recall@K, dan average elapsed time.
+
+Perubahan kecil pada search service:
+
+- `search_documents` mendapat parameter opsional `save_history: bool = True`.
+- Endpoint API tetap memakai perilaku lama karena default masih menyimpan history.
+- Evaluator dapat mematikan penyimpanan history secara eksplisit.
+
+Dataset dan ground truth:
+
+```text
+demo-data/
+|-- README.md
+|-- manifest.example.json
+|-- relevance-judgments.example.json
+|-- pdfs/
+    |-- .gitkeep
+```
+
+Perintah import:
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+python -m app.cli.import_demo_dataset --manifest ../demo-data/manifest.json --dry-run
+python -m app.cli.import_demo_dataset --manifest ../demo-data/manifest.json
+python -m app.cli.import_demo_dataset --manifest ../demo-data/manifest.json --reindex-existing
+```
+
+Perintah evaluasi:
+
+```powershell
+python -m app.cli.evaluate_ir --judgments ../demo-data/relevance-judgments.json --k 5
+```
+
+Empty/error/loading dan accessibility:
+
+- Audit source menunjukkan halaman utama sudah memiliki loading, empty, error, dan retry state pada area API terintegrasi.
+- Modal utama Radix memiliki `Dialog.Title` dan `Dialog.Description`.
+- Pesan gagal indexing disanitasi di backend admin service.
+- Frontend memakai `getSafeErrorMessage` untuk error API.
+- Tidak ada fallback mock diam-diam pada area auth, fields, projects, documents, search, dashboard, users, admin projects, admin documents, dan admin indexing.
+- Responsive QA menemukan overflow horizontal pada mobile 390px karena class visibility `hidden sm:flex` dipasang langsung pada komponen `Button` yang memiliki base `inline-flex`.
+- Polish dilakukan dengan memindahkan class visibility ke wrapper pada tombol upload navbar dan banner dashboard mahasiswa. Warna, typography, spacing, dan desain visual tidak diubah.
+- Browser QA setelah polish menunjukkan tidak ada horizontal overflow pada 1440x900, 1366x768, 768x1024, dan 390x844 untuk home, search, dan collection detail.
+
+Acceptance criteria Tahap 8B:
+
+- Helper import dataset tersedia dan idempotent.
+- Dry-run bekerja.
+- PDF aktual tidak masuk Git.
+- Manifest example dan relevance judgments example tersedia.
+- Evaluator Precision@K dan Recall@K tersedia.
+- Dokumentasi IR, panduan demo, dan checklist submission tersedia.
+- Backend regression test dan frontend checks wajib lulus sebelum submit.
+- QA lintas role dan responsive QA dicatat pada ringkasan pekerjaan.
+
+Keterbatasan yang tetap berlaku:
+
+- OCR belum didukung.
+- Semantic search, embedding, vector database, dan Elasticsearch tidak digunakan.
+- Dataset aktual harus disiapkan lokal di luar Git.
+- SQLite dan local uploads masih target MVP lokal.

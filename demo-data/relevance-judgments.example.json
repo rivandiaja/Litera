@@ -1,0 +1,33 @@
+{
+  "queries": [
+    {
+      "query": "snmp olt onu",
+      "relevant_documents": [
+        "contoh-monitoring-olt.pdf",
+        "contoh-analisis-ftth.pdf"
+      ]
+    },
+    {
+      "query": "mikrotik api pppoe",
+      "relevant_documents": [
+        "contoh-mikrotik-pppoe.pdf"
+      ]
+    },
+    {
+      "query": "analisis gangguan ftth",
+      "relevant_documents": [
+        "contoh-analisis-ftth.pdf"
+      ]
+    },
+    {
+      "query": "quality of service bandwidth",
+      "relevant_documents": []
+    },
+    {
+      "query": "monitoring jaringan",
+      "relevant_documents": [
+        "contoh-monitoring-olt.pdf"
+      ]
+    }
+  ]
+}

@@ -134,6 +134,145 @@ Area statis yang masih tersisa:
 - Beberapa preview visual Figma, seperti kartu contoh di hero/login, tetap statis sebagai elemen presentasi desain.
 - Tidak ada fallback diam-diam ke mock data untuk statistik homepage, dashboard mahasiswa, dashboard admin, users, collections, documents, atau monitoring indexing.
 
-## Rencana Tahap Berikutnya
+## Stack Teknologi
 
-Tahap berikutnya adalah Tahap 8B: validasi dataset demo kecil, hardening edge case UI/API, pengujian manual lebih luas, dan polishing responsif tanpa mengubah desain visual hasil export Figma Make.
+Frontend:
+
+- Vite 6, React 18, TypeScript.
+- Tailwind CSS 4 dan CSS variables hasil export Figma Make.
+- Radix UI, shadcn-style components, lucide-react, sonner.
+- Vitest, Testing Library, ESLint, npm lockfile.
+
+Backend:
+
+- FastAPI, SQLAlchemy 2, Alembic, SQLite.
+- PyJWT, Argon2 password hashing via `pwdlib[argon2]`.
+- PyMuPDF untuk ekstraksi teks PDF.
+- Sastrawi untuk stemming Bahasa Indonesia.
+- Custom inverted index dan TF-IDF, tanpa Elasticsearch/vector database/embedding.
+
+## Struktur Folder Ringkas
+
+```text
+.
+|-- src/                    # Frontend React hasil export Figma Make
+|-- backend/                # FastAPI, SQLAlchemy, indexing, search, tests
+|-- docs/                   # Rencana implementasi, metode IR, panduan demo
+|-- demo-data/              # Manifest contoh dan ground truth contoh
+|-- README.md
+|-- PRD.md
+|-- AGENTS.md
+```
+
+## Metode Information Retrieval
+
+Pipeline IR Litera:
+
+```text
+PDF -> ekstraksi teks per halaman -> preprocessing Bahasa Indonesia
+-> inverted index custom -> query processing -> candidate retrieval
+-> TF-IDF -> cosine similarity -> ranking -> snippet dan halaman relevan
+```
+
+Rumus ranking:
+
+```text
+tf_weight(tf) = 0 jika tf = 0, selain itu 1 + ln(tf)
+idf(term) = ln((N + 1) / (df(term) + 1)) + 1
+cosine_similarity = dot(query_vector, document_vector) / (norm(query) * norm(document))
+```
+
+Dokumentasi akademik lengkap ada di `docs/IR_METHOD.md`.
+
+## Dataset Demo Lokal
+
+PDF aktual tidak boleh di-commit. Struktur dataset:
+
+```text
+demo-data/
+|-- README.md
+|-- manifest.example.json
+|-- relevance-judgments.example.json
+|-- pdfs/
+    |-- .gitkeep
+```
+
+Salin file contoh untuk dataset lokal:
+
+```powershell
+Copy-Item demo-data/manifest.example.json demo-data/manifest.json
+Copy-Item demo-data/relevance-judgments.example.json demo-data/relevance-judgments.json
+```
+
+Letakkan PDF di `demo-data/pdfs/`, lalu sesuaikan path pada `manifest.json`.
+
+Dry-run import:
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+python -m app.cli.import_demo_dataset --manifest ../demo-data/manifest.json --dry-run
+```
+
+Import dan indexing sinkron:
+
+```powershell
+python -m app.cli.import_demo_dataset --manifest ../demo-data/manifest.json
+```
+
+Re-copy dan re-index dokumen existing:
+
+```powershell
+python -m app.cli.import_demo_dataset --manifest ../demo-data/manifest.json --reindex-existing
+```
+
+## Evaluasi IR
+
+Evaluator memakai search service backend langsung, bukan HTTP request, dan tidak mencatat search history.
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+python -m app.cli.evaluate_ir --judgments ../demo-data/relevance-judgments.json --k 5
+```
+
+Output mencakup processed terms, jumlah hasil, posisi dokumen relevan, Precision@K, Recall@K, mean metrics, dan elapsed time.
+
+## Endpoint Ringkas
+
+Endpoint utama tersedia di bawah `/api/v1`:
+
+- Auth: `/auth/register`, `/auth/login`, `/auth/me`.
+- Fields: `/fields`, `/fields/{id}`.
+- Projects: `/projects`, `/projects/me`, `/projects/{id}`.
+- Documents: `/projects/{id}/documents`, `/documents/{id}`, `/documents/{id}/file`, `/documents/{id}/reindex`.
+- Search: `/search`, `/search/catalog`, `/search/history`.
+- Dashboard: `/dashboard/me`, `/dashboard/repository-stats`.
+- Admin: `/admin/dashboard`, `/admin/users`, `/admin/projects`, `/admin/documents`, `/admin/indexing`.
+
+## Panduan Demo dan Checklist
+
+- Panduan demo presentasi: `docs/DEMO_GUIDE.md`.
+- Checklist penyerahan: `docs/SUBMISSION_CHECKLIST.md`.
+- Rencana implementasi lengkap: `docs/IMPLEMENTATION_PLAN.md`.
+
+## Keterbatasan MVP
+
+- OCR untuk PDF scan belum didukung.
+- Search semantic, embedding, vector database, dan Elasticsearch sengaja tidak digunakan.
+- Dataset dan storage masih lokal.
+- SQLite cocok untuk MVP dan demo kelas, belum untuk deployment multi-user besar.
+- Tab pengaturan platform admin masih statis.
+
+## Troubleshooting
+
+- Login gagal: jalankan `python -m app.services.seed`.
+- Search kosong: pastikan dokumen berstatus `indexed`.
+- PDF gagal indexing: pastikan PDF memiliki text layer, bukan scan.
+- Upload ditolak: cek ekstensi `.pdf`, magic bytes, dan ukuran file.
+- Frontend gagal call API: cek `VITE_API_BASE_URL`.
+- CORS error: cek `FRONTEND_ORIGIN` di backend `.env`.
+
+## Status Proyek
+
+Tahap 8B selesai secara kode dan dokumentasi: dataset demo lokal, import helper, evaluator Precision@K/Recall@K, dokumentasi IR, panduan demo, checklist penyerahan, dan hardening akhir tersedia. Frontend tetap mempertahankan desain Figma Make dan backend tetap memakai custom inverted index serta TF-IDF eksplisit.

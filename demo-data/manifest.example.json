@@ -1,0 +1,48 @@
+{
+  "users": [
+    {
+      "email": "arif@mahasiswa.ac.id",
+      "projects": [
+        {
+          "field": "Jaringan Komputer",
+          "title": "Perancangan Network Monitoring System Terintegrasi untuk Monitoring OLT dan PPPoE",
+          "description": "Koleksi literatur untuk penelitian monitoring OLT, ONU, PPPoE, MikroTik, FTTH, dan SNMP.",
+          "keywords": "NMS, SNMP, OLT, ONU, PPPoE, MikroTik, FTTH",
+          "visibility": "public",
+          "documents": [
+            {
+              "path": "pdfs/contoh-monitoring-olt.pdf",
+              "title": "Monitoring OLT Menggunakan SNMP"
+            },
+            {
+              "path": "pdfs/contoh-mikrotik-pppoe.pdf",
+              "title": "Integrasi MikroTik API untuk PPPoE"
+            },
+            {
+              "path": "pdfs/contoh-analisis-ftth.pdf",
+              "title": "Analisis Gangguan FTTH dan ONU"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "email": "siti@mahasiswa.ac.id",
+      "projects": [
+        {
+          "field": "Artificial Intelligence",
+          "title": "Implementasi Deep Learning untuk Deteksi Objek Real-Time pada Sistem Keamanan",
+          "description": "Koleksi literatur untuk penelitian deteksi objek dan computer vision.",
+          "keywords": "YOLO, CNN, object detection, real-time",
+          "visibility": "private",
+          "documents": [
+            {
+              "path": "pdfs/contoh-object-detection.pdf",
+              "title": "Object Detection Real-Time Menggunakan CNN"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -152,10 +152,12 @@ export function Navbar({ transparent = false }: { transparent?: boolean }) {
           </div>
 
           {/* Upload button */}
-          <Button onClick={() => setShowUploadModal(true)} size="sm" className="hidden sm:flex">
-            <Upload className="w-3.5 h-3.5" strokeWidth={2.5} />
-            Unggah Literatur
-          </Button>
+          <div className="hidden sm:block shrink-0">
+            <Button onClick={() => setShowUploadModal(true)} size="sm">
+              <Upload className="w-3.5 h-3.5" strokeWidth={2.5} />
+              Unggah Literatur
+            </Button>
+          </div>
 
           {/* Mobile menu */}
           <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
