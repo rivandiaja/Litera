@@ -326,6 +326,9 @@ function FieldFormModal({
               <Dialog.Title className="font-bold text-[#0C0D1A] text-sm">
                 {editingField ? "Edit Bidang Penelitian" : "Tambah Bidang Penelitian"}
               </Dialog.Title>
+              <Dialog.Description className="sr-only">
+                Form untuk menambah atau mengubah bidang penelitian Litera.
+              </Dialog.Description>
             </div>
             <Dialog.Close asChild>
               <button className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all">

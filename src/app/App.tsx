@@ -79,7 +79,7 @@ function AppShell() {
       case "create-collection":
         return <CreateCollectionPage projectId={page.projectId} />;
       case "admin":
-        return <AdminDashboard />;
+        return isAdmin ? <AdminDashboard /> : <HomePage />;
       default:
         return <HomePage />;
     }

@@ -54,6 +54,15 @@ function jsonResponse(payload: unknown) {
 function createFetchMock() {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = new URL(String(input));
+    if (url.pathname.endsWith("/dashboard/repository-stats")) {
+      return jsonResponse({
+        fields_count: 4,
+        public_projects_count: 12,
+        public_documents_count: 42,
+        contributors_count: 7,
+        indexed_pages_count: 512,
+      });
+    }
     if (url.pathname.endsWith("/fields")) {
       return jsonResponse({
         items: [{
@@ -123,6 +132,8 @@ describe("HomePage search", () => {
     renderPage();
 
     await screen.findByText("Jaringan Komputer");
+    expect(await screen.findByText("42")).toBeInTheDocument();
+    expect(screen.getByText("Literatur PDF")).toBeInTheDocument();
     const input = screen.getByPlaceholderText("Cari jurnal, topik penelitian, kata kunci...");
     fireEvent.change(input, { target: { value: "   " } });
     fireEvent.click(screen.getAllByRole("button", { name: "Cari" })[0]);

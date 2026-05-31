@@ -1,6 +1,6 @@
 # Litera Backend
 
-Backend Litera adalah REST API FastAPI untuk autentikasi, database, migration, seed data MVP, CRUD bidang penelitian, CRUD koleksi penelitian, CRUD dokumen PDF, multiple upload, ekstraksi teks, preprocessing Bahasa Indonesia, custom inverted index, dan search engine TF-IDF. Frontend Tahap 7B-2 sudah memakai endpoint auth, fields, projects, documents, search TF-IDF, catalog search, dan search history.
+Backend Litera adalah REST API FastAPI untuk autentikasi, database, migration, seed data MVP, CRUD bidang penelitian, CRUD koleksi penelitian, CRUD dokumen PDF, multiple upload, ekstraksi teks, preprocessing Bahasa Indonesia, custom inverted index, search engine TF-IDF, statistik dashboard, dan endpoint admin. Frontend saat ini memakai endpoint auth, fields, projects, documents, search TF-IDF, catalog search, search history, dashboard, dan admin monitoring.
 
 ## Prerequisite
 
@@ -102,6 +102,14 @@ Password berikut hanya untuk demo lokal dan dokumentasi tugas.
 - `GET /api/v1/search/catalog`
 - `GET /api/v1/search/history`
 - `DELETE /api/v1/search/history`
+- `GET /api/v1/dashboard/me`
+- `GET /api/v1/dashboard/repository-stats`
+- `GET /api/v1/admin/dashboard` admin
+- `GET /api/v1/admin/users` admin
+- `PATCH /api/v1/admin/users/{user_id}` admin
+- `GET /api/v1/admin/projects` admin
+- `GET /api/v1/admin/documents` admin
+- `GET /api/v1/admin/indexing` admin
 
 ## Multipart Upload PDF
 
@@ -229,6 +237,36 @@ Snippet dibuat dari `document_pages.raw_text` pada halaman terbaik, bukan dari `
 
 `GET /api/v1/search/history` menampilkan riwayat pencarian user aktif, terbaru dahulu. `DELETE /api/v1/search/history` hanya menghapus riwayat milik user aktif.
 
+## Dashboard dan Admin
+
+`GET /api/v1/dashboard/me` mengembalikan ringkasan milik user aktif saja:
+
+- jumlah koleksi milik user
+- jumlah dokumen milik user
+- breakdown status indexing milik user
+- jumlah halaman terindeks dari `document_stats`
+- jumlah riwayat pencarian
+- koleksi, dokumen, dan pencarian terbaru, masing-masing dibatasi
+
+`GET /api/v1/dashboard/repository-stats` mengembalikan statistik publik untuk homepage. Aturan perhitungan:
+
+- hanya bidang aktif yang dihitung
+- hanya koleksi `public` yang dihitung
+- hanya dokumen dari koleksi `public` yang dihitung
+- contributor adalah user berbeda yang memiliki minimal satu koleksi `public`
+- halaman terindeks hanya berasal dari dokumen public yang memiliki `document_stats`
+
+Endpoint admin hanya dapat diakses role `admin`:
+
+- `/admin/dashboard` menghitung seluruh data public dan private, menampilkan breakdown indexing, upload terbaru, dan dokumen gagal.
+- `/admin/users` mendukung search, filter role, filter aktif/nonaktif, pagination, dan count koleksi/dokumen.
+- `/admin/users/{user_id}` hanya menerima perubahan `is_active`; perubahan password dan role tidak tersedia di endpoint ini.
+- `/admin/projects` mendukung search, filter bidang, owner, visibility, pagination, dan sorting.
+- `/admin/documents` mendukung search, filter status indexing, bidang, koleksi, owner, pagination, dan sorting.
+- `/admin/indexing` mengembalikan summary status serta daftar dokumen untuk monitoring.
+
+Pesan kegagalan indexing yang berpotensi berisi traceback mentah disanitasi sebelum dikembalikan ke response admin. Re-index tetap memakai endpoint existing `POST /api/v1/documents/{document_id}/reindex`; admin berhak menjalankannya melalui permission owner/admin yang sudah ada.
+
 ## Aturan Akses
 
 - Semua endpoint `fields` dan `projects` membutuhkan JWT.
@@ -242,8 +280,16 @@ Snippet dibuat dari `document_pages.raw_text` pada halaman terbaik, bukan dari `
 - Dokumen private tidak masuk search user lain, tidak memengaruhi result count, dan tidak bocor lewat snippet.
 - Admin dapat mencari seluruh dokumen indexed termasuk private.
 - Field nonaktif tetap boleh dipakai sebagai filter search untuk dokumen lama yang masih dapat diakses.
+- User nonaktif tidak dapat login.
+- Token lama milik user yang sudah dinonaktifkan ditolak oleh dependency active user.
+- Admin tidak dapat menonaktifkan akun dirinya sendiri melalui endpoint admin users.
+- Statistik repository publik tidak menghitung private project atau private document.
+- Dashboard mahasiswa tidak memiliki parameter user id sehingga tidak dapat melihat dashboard mahasiswa lain.
 
 ## Belum Dibuat pada Tahap Ini
 
-- Endpoint admin lengkap untuk user/document moderation.
-- Endpoint agregasi statistik khusus untuk dashboard admin dan dashboard mahasiswa.
+- OCR untuk PDF scan.
+- Semantic search, embedding, vector database, Elasticsearch, atau library search engine siap pakai.
+- Audit log tabel terpisah untuk activity lengkap.
+- Dataset demo besar 20-50 PDF.
+- Endpoint persistence untuk pengaturan platform admin.

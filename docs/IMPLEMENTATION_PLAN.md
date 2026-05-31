@@ -1017,3 +1017,89 @@ Rekomendasi tahap berikutnya:
 - Tambahkan endpoint agregasi statistik yang dibutuhkan dashboard agar placeholder/mock statistik dapat diganti.
 - Tambahkan fixture dataset demo PDF teks 20-50 dokumen untuk validasi ranking dan presentasi.
 - Pertimbangkan URL routing setelah fitur inti stabil, tanpa rebuild desain.
+
+## 25. Progress Tahap 8A
+
+Status: selesai untuk endpoint statistik agregat, dashboard mahasiswa nyata, dashboard admin nyata, monitoring indexing admin, manajemen pengguna, dan hardening permission dasar.
+
+Backend yang ditambahkan:
+
+- Schema `dashboard.py` dan `admin.py` untuk typed response agregat.
+- Service `dashboard_service.py` untuk dashboard user aktif dan statistik repository publik.
+- Service `admin_service.py` untuk dashboard admin, users, projects, documents, indexing, dan sanitasi pesan gagal.
+- Route `dashboard.py` dengan `GET /api/v1/dashboard/me` dan `GET /api/v1/dashboard/repository-stats`.
+- Route `admin.py` dengan `GET /api/v1/admin/dashboard`, `GET /api/v1/admin/users`, `PATCH /api/v1/admin/users/{user_id}`, `GET /api/v1/admin/projects`, `GET /api/v1/admin/documents`, dan `GET /api/v1/admin/indexing`.
+- Router baru didaftarkan di `backend/app/main.py`.
+
+Frontend yang ditambahkan:
+
+- Type DTO `src/types/dashboard.ts` dan `src/types/admin.ts`.
+- Service `src/services/dashboard-service.ts` dan `src/services/admin-service.ts`.
+- Hook `useMyDashboard`, `useRepositoryStats`, dan `useAdminDashboard`.
+- Homepage statistics memakai `/dashboard/repository-stats`.
+- Dashboard mahasiswa memakai `/dashboard/me` untuk ringkasan, PDF terbaru, koleksi terbaru, dan aktivitas sederhana.
+- Dashboard admin memakai `/admin/dashboard`, `/admin/users`, `/admin/projects`, `/admin/documents`, dan `/admin/indexing`.
+- Tab admin pengguna mendukung search, filter role, filter status, pagination, dan aksi aktif/nonaktif.
+- Tab admin koleksi mendukung search, filter bidang, filter visibility, pagination, dan tombol lihat detail.
+- Tab admin dokumen mendukung search, filter status, filter bidang, aksi buka PDF, re-index, dan hapus.
+- Monitoring indexing admin menampilkan breakdown status, daftar dokumen, alasan gagal aman, retry re-index, dan polling 4 detik hanya saat ada dokumen `pending` atau `processing`.
+- Guard state-based route admin diperkeras agar non-admin tidak dirender ke panel admin.
+- Dialog bidang penelitian admin dan halaman bidang penelitian diberi `Dialog.Description` untuk membersihkan warning accessibility Radix.
+
+Aturan statistik:
+
+- Dashboard mahasiswa hanya menghitung koleksi, dokumen, status indexing, halaman terindeks, dan search history milik user aktif.
+- Repository stats homepage hanya menghitung bidang aktif, koleksi public, dokumen pada koleksi public, halaman indexed public, dan contributor yang memiliki minimal satu koleksi public.
+- Dashboard admin menghitung seluruh data public dan private.
+- Admin failed document response memakai pesan error aman dan tidak mengembalikan traceback mentah.
+
+Permission hardening:
+
+- Endpoint admin memakai dependency `require_admin`.
+- User nonaktif ditolak saat login.
+- Token lama user nonaktif ditolak oleh dependency active user.
+- Admin tidak dapat menonaktifkan akun dirinya sendiri.
+- Private project dan private document tidak dihitung pada repository stats publik.
+- Dashboard mahasiswa tidak menyediakan parameter user id sehingga tidak bisa meminta dashboard mahasiswa lain.
+- Re-index, delete, dan buka file PDF tetap memakai permission owner/admin existing.
+
+Test yang ditambahkan atau diperbarui:
+
+- `backend/tests/test_dashboard_admin_api.py` untuk dashboard user, repository stats, admin dashboard, admin users/deactivation, admin projects, admin documents, dan indexing.
+- `src/services/dashboard-service.test.ts` untuk endpoint dashboard dan token.
+- `src/services/admin-service.test.ts` untuk query admin, update user, dan error mapping.
+- `src/app/components/HomePage.test.tsx` untuk statistik repository API.
+- `src/app/components/StudentDashboard.test.tsx` untuk ringkasan dashboard dan recent data API.
+- `src/app/components/AdminDashboard.test.tsx` untuk overview admin, users, projects, documents, update user, dan polling indexing.
+
+Area statis yang masih sengaja dipertahankan:
+
+- Pengaturan platform admin belum memiliki endpoint persistence.
+- Kartu preview dekoratif di hero/login tetap statis sebagai bagian desain Figma Make.
+- Tidak ada fallback diam-diam ke mock untuk homepage stats, dashboard mahasiswa, dashboard admin, users, projects, documents, atau indexing.
+
+Perintah verifikasi Tahap 8A:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m pytest
+
+cd ..
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+git diff --check
+```
+
+Catatan verifikasi:
+
+- Menjalankan `python -m pytest` dari Python global gagal karena modul `pytest` tidak terpasang di interpreter global. Verifikasi backend yang benar memakai virtualenv project: `.\.venv\Scripts\python.exe -m pytest`.
+- Warning yang tersisa berasal dari dependency Sastrawi pada Python 3.14 terkait argumen positional `count` di `re.sub`; test tetap lulus dan warning bukan berasal dari kode aplikasi Litera.
+
+Rekomendasi Tahap 8B:
+
+- Tambahkan dataset demo kecil berbasis PDF teks untuk validasi manual ranking TF-IDF.
+- Tambahkan verifikasi browser end-to-end lintas role dengan data seed yang stabil.
+- Pertimbangkan endpoint konfigurasi admin bila tab pengaturan ingin dibuat persisten.
+- Poles empty state dan responsive QA tanpa mengubah bahasa visual Figma Make.

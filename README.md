@@ -2,7 +2,7 @@
 
 Litera adalah prototype frontend untuk literature search engine pengelolaan referensi penelitian mahasiswa. Repository ini berasal dari export ZIP desain Figma Make, sehingga desain visual, layout, typography, warna, dan komponen UI perlu dipertahankan semaksimal mungkin.
 
-Status saat ini: frontend prototype Figma Make sudah terhubung ke backend untuk autentikasi, profil user aktif, bidang penelitian, koleksi penelitian, dokumen PDF pada detail koleksi, pencarian TF-IDF, catalog search, scoped search, relevant pages, dan search history. Backend FastAPI sudah menyediakan auth, database, CRUD bidang/koleksi, upload PDF, ekstraksi teks, preprocessing Bahasa Indonesia, custom inverted index, dan search engine TF-IDF. Dashboard admin penuh dan statistik agregat repository masih belum diintegrasikan ke frontend.
+Status saat ini: frontend prototype Figma Make sudah terhubung ke backend untuk autentikasi, profil user aktif, bidang penelitian, koleksi penelitian, dokumen PDF, pencarian TF-IDF, catalog search, scoped search, relevant pages, search history, statistik repository, dashboard mahasiswa, dashboard admin, manajemen pengguna admin, daftar koleksi/dokumen admin, dan monitoring indexing. Backend FastAPI sudah menyediakan auth, database, CRUD bidang/koleksi/dokumen, upload PDF, ekstraksi teks, preprocessing Bahasa Indonesia, custom inverted index, search engine TF-IDF, endpoint agregat dashboard, dan endpoint admin.
 
 ## Prerequisite
 
@@ -68,7 +68,7 @@ Backend tahap awal berada di folder:
 backend/
 ```
 
-Backend menggunakan FastAPI, SQLAlchemy, SQLite, Alembic, PyJWT, `pwdlib[argon2]`, PyMuPDF, Sastrawi, dan `python-multipart`. Pada tahap saat ini backend menyediakan health check, register, login, `/auth/me`, migration, seed data demo, CRUD bidang/koleksi, CRUD dokumen PDF, multiple upload, BackgroundTasks indexing, inverted index eksplisit, global search TF-IDF, catalog search, dan search history. Frontend Tahap 7B-2 memakai endpoint auth, fields, projects, documents, search, catalog search, dan search history.
+Backend menggunakan FastAPI, SQLAlchemy, SQLite, Alembic, PyJWT, `pwdlib[argon2]`, PyMuPDF, Sastrawi, dan `python-multipart`. Pada tahap saat ini backend menyediakan health check, register, login, `/auth/me`, migration, seed data demo, CRUD bidang/koleksi, CRUD dokumen PDF, multiple upload, BackgroundTasks indexing, inverted index eksplisit, global search TF-IDF, catalog search, search history, statistik repository, dashboard mahasiswa, dashboard admin, admin users, admin projects, admin documents, dan admin indexing. Frontend memakai endpoint tersebut tanpa fallback mock pada area yang sudah terintegrasi.
 
 Setup singkat:
 
@@ -120,13 +120,20 @@ Terintegrasi dengan API:
 - Snippet plain text dengan highlight aman tanpa `dangerouslySetInnerHTML`.
 - Relevant pages dan buka PDF langsung ke `#page=...` tanpa token di URL.
 - Search history dashboard mahasiswa melalui endpoint history.
+- Statistik repository beranda melalui `/dashboard/repository-stats`.
+- Ringkasan dashboard mahasiswa melalui `/dashboard/me`.
+- Ringkasan dashboard admin melalui `/admin/dashboard`.
+- Tab admin pengguna melalui `/admin/users` dan `PATCH /admin/users/{id}`.
+- Tab admin koleksi melalui `/admin/projects`.
+- Tab admin dokumen melalui `/admin/documents`.
+- Monitoring indexing admin melalui `/admin/indexing` dengan polling saat ada status `pending` atau `processing`.
 
-Masih mock atau placeholder:
+Area statis yang masih tersisa:
 
-- Dashboard admin selain CRUD bidang penelitian.
-- Statistik repository yang belum tersedia dari endpoint agregasi.
-- Beberapa ringkasan dashboard mahasiswa yang belum punya endpoint agregasi khusus.
+- Pengaturan platform di dashboard admin belum memiliki endpoint persistence pada MVP ini.
+- Beberapa preview visual Figma, seperti kartu contoh di hero/login, tetap statis sebagai elemen presentasi desain.
+- Tidak ada fallback diam-diam ke mock data untuk statistik homepage, dashboard mahasiswa, dashboard admin, users, collections, documents, atau monitoring indexing.
 
 ## Rencana Tahap Berikutnya
 
-Tahap berikutnya adalah melanjutkan dashboard admin, statistik agregat, dan hardening end-to-end dataset demo tanpa mengubah desain visual hasil export Figma Make.
+Tahap berikutnya adalah Tahap 8B: validasi dataset demo kecil, hardening edge case UI/API, pengujian manual lebih luas, dan polishing responsif tanpa mengubah desain visual hasil export Figma Make.

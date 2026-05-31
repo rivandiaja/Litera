@@ -7,23 +7,15 @@ import {
 } from "lucide-react";
 import { useApp } from "../context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useMyDashboard } from "../../hooks/use-my-dashboard";
 import { useSearchHistory } from "../../hooks/use-search-history";
 import { getSafeErrorMessage } from "../../lib/api-error";
-import { adaptProject, getAvatarColor, getInitials, type ProjectDisplay } from "../../lib/domain-display";
+import { adaptProject, formatDate, getAvatarColor, getInitials, type ProjectDisplay } from "../../lib/domain-display";
 import { projectService } from "../../services/project-service";
 import { Avatar, Button, Badge, StatusDot, ProgressBar, cn } from "./ui";
-import { PDFS } from "./data";
 import { toast } from "sonner";
 
 type Tab = "overview" | "collections" | "pdfs" | "indexing" | "history" | "profile";
-
-const ACTIVITY = [
-  { icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50", msg: "'Monitoring Optical Network Unit Berbasis SNMP' berhasil diindeks", time: "2 jam lalu" },
-  { icon: Upload, color: "text-indigo-500", bg: "bg-indigo-50", msg: "3 PDF diunggah ke koleksi 'Perancangan Network Monitoring System'", time: "5 jam lalu" },
-  { icon: AlertCircle, color: "text-red-500", bg: "bg-red-50", msg: "'Konfigurasi BGP Route Reflector' gagal diindeks", time: "1 hari lalu" },
-  { icon: Plus, color: "text-violet-500", bg: "bg-violet-50", msg: "Koleksi baru 'Smart Home Berbasis IoT' berhasil dibuat", time: "3 hari lalu" },
-  { icon: Search, color: "text-sky-500", bg: "bg-sky-50", msg: "Pencarian 'monitoring redaman onu' menghasilkan 3 hasil relevan", time: "4 hari lalu" },
-];
 
 const NAV_ITEMS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Ringkasan", icon: LayoutDashboard },
@@ -44,16 +36,52 @@ export function StudentDashboard() {
   const [collectionsLoading, setCollectionsLoading] = useState(true);
   const [collectionsError, setCollectionsError] = useState<string | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
+  const myDashboard = useMyDashboard();
   const searchHistory = useSearchHistory(historyPage, 10);
 
-  const myPdfs = PDFS.filter((p) => myCollections.some((c) => c.id === p.collectionId));
-  const indexed = myPdfs.filter((p) => p.indexingStatus === "indexed");
-  const processing = myPdfs.filter((p) => ["pending", "processing"].includes(p.indexingStatus));
-  const failed = myPdfs.filter((p) => p.indexingStatus === "failed");
-  const totalPages = indexed.reduce((s, p) => s + p.pages, 0);
-  const indexPct = myPdfs.length ? Math.round((indexed.length / myPdfs.length) * 100) : 0;
+  const summary = myDashboard.data?.summary;
+  const recentDocuments = myDashboard.data?.recent_documents ?? [];
+  const indexedCount = summary?.indexed_documents_count ?? 0;
+  const processingCount = (summary?.pending_documents_count ?? 0) + (summary?.processing_documents_count ?? 0);
+  const failedCount = summary?.failed_documents_count ?? 0;
+  const totalPages = summary?.indexed_pages_count ?? 0;
+  const documentCount = summary?.documents_count ?? 0;
+  const projectCount = summary?.projects_count ?? myCollections.length;
+  const indexPct = documentCount ? Math.round((indexedCount / documentCount) * 100) : 0;
   const initials = getInitials(user?.name);
   const avatarColor = getAvatarColor(user?.id || 1);
+  const recentActivities = [
+    ...recentDocuments.slice(0, 3).map((document) => ({
+      id: `document-${document.id}`,
+      icon: document.index_status === "failed" ? AlertCircle : document.index_status === "indexed" ? CheckCircle2 : Upload,
+      color: document.index_status === "failed" ? "text-red-500" : document.index_status === "indexed" ? "text-emerald-500" : "text-indigo-500",
+      bg: document.index_status === "failed" ? "bg-red-50" : document.index_status === "indexed" ? "bg-emerald-50" : "bg-indigo-50",
+      msg: `"${document.title}" ${document.index_status === "indexed" ? "berhasil diindeks" : document.index_status === "failed" ? "gagal diindeks" : "menunggu indexing"}`,
+      time: formatDate(document.created_at),
+    })),
+    ...(myDashboard.data?.recent_projects ?? []).slice(0, 2).map((project) => ({
+      id: `project-${project.id}`,
+      icon: Plus,
+      color: "text-violet-500",
+      bg: "bg-violet-50",
+      msg: `Koleksi "${project.title}" dibuat`,
+      time: formatDate(project.created_at),
+    })),
+    ...(myDashboard.data?.recent_searches ?? []).slice(0, 2).map((item) => ({
+      id: `search-${item.id}`,
+      icon: Search,
+      color: "text-sky-500",
+      bg: "bg-sky-50",
+      msg: `Pencarian "${item.query}" menghasilkan ${item.result_count} hasil`,
+      time: formatDate(item.created_at),
+    })),
+  ].slice(0, 5);
+
+  function formatBytes(value: number) {
+    if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+    if (value >= 1024) return `${Math.max(1, Math.round(value / 1024))} KB`;
+    return `${value} B`;
+  }
 
   useEffect(() => {
     let active = true;
@@ -142,12 +170,12 @@ export function StudentDashboard() {
               >
                 <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-white" : "text-slate-400")} strokeWidth={isActive ? 2 : 1.75} />
                 <span className="flex-1">{item.label}</span>
-                {item.id === "indexing" && processing.length > 0 && (
+                {item.id === "indexing" && processingCount > 0 && (
                   <span className={cn(
                     "min-w-[18px] h-[18px] text-[10px] font-bold rounded-full flex items-center justify-center px-1",
                     isActive ? "bg-white/20 text-white" : "bg-amber-500 text-white"
                   )}>
-                    {processing.length}
+                    {processingCount}
                   </span>
                 )}
               </button>
@@ -201,10 +229,10 @@ export function StudentDashboard() {
         {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { val: myCollections.length, lbl: "Koleksi", icon: BookOpen, iconBg: "bg-indigo-50", iconColor: "text-indigo-500", action: () => setActiveTab("collections") },
-            { val: myPdfs.length, lbl: "PDF Diunggah", icon: FileText, iconBg: "bg-violet-50", iconColor: "text-violet-500", action: () => setActiveTab("pdfs") },
+            { val: projectCount, lbl: "Koleksi", icon: BookOpen, iconBg: "bg-indigo-50", iconColor: "text-indigo-500", action: () => setActiveTab("collections") },
+            { val: documentCount, lbl: "PDF Diunggah", icon: FileText, iconBg: "bg-violet-50", iconColor: "text-violet-500", action: () => setActiveTab("pdfs") },
             { val: totalPages, lbl: "Hal. Terindeks", icon: TrendingUp, iconBg: "bg-emerald-50", iconColor: "text-emerald-500", action: () => setActiveTab("indexing") },
-            { val: processing.length, lbl: "Proses Indexing", icon: Loader2, iconBg: "bg-amber-50", iconColor: "text-amber-500", action: () => setActiveTab("indexing") },
+            { val: processingCount, lbl: "Proses Indexing", icon: Loader2, iconBg: "bg-amber-50", iconColor: "text-amber-500", action: () => setActiveTab("indexing") },
           ].map(({ val, lbl, icon: Icon, iconBg, iconColor, action }) => (
             <button key={lbl} onClick={action}
               className="group bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] p-5 text-left hover:shadow-[0_4px_14px_rgba(12,13,26,0.09)] hover:-translate-y-0.5 transition-all duration-200">
@@ -222,8 +250,20 @@ export function StudentDashboard() {
           <div className="lg:col-span-3 bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-5">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Aktivitas Terbaru</p>
             <div className="flex flex-col gap-3">
-              {ACTIVITY.map((a, i) => (
-                <div key={i} className="flex items-start gap-3">
+              {myDashboard.isLoading && (
+                <p className="text-sm text-slate-400">Memuat aktivitas dari API...</p>
+              )}
+              {!myDashboard.isLoading && myDashboard.error && (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-red-600">{myDashboard.error}</p>
+                  <Button size="xs" variant="secondary" onClick={myDashboard.retry}>Coba Lagi</Button>
+                </div>
+              )}
+              {!myDashboard.isLoading && !myDashboard.error && recentActivities.length === 0 && (
+                <p className="text-sm text-slate-400">Belum ada aktivitas terbaru.</p>
+              )}
+              {!myDashboard.isLoading && !myDashboard.error && recentActivities.map((a) => (
+                <div key={a.id} className="flex items-start gap-3">
                   <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5", a.bg)}>
                     <a.icon className={cn("w-3.5 h-3.5", a.color)} strokeWidth={2} />
                   </div>
@@ -253,9 +293,9 @@ export function StudentDashboard() {
 
             <div className="flex flex-col gap-2.5">
               {[
-                { label: "Berhasil", count: indexed.length, color: "bg-emerald-500" },
-                { label: "Diproses", count: processing.length, color: "bg-indigo-500 animate-pulse" },
-                { label: "Gagal", count: failed.length, color: "bg-red-500" },
+                { label: "Berhasil", count: indexedCount, color: "bg-emerald-500" },
+                { label: "Diproses", count: processingCount, color: "bg-indigo-500 animate-pulse" },
+                { label: "Gagal", count: failedCount, color: "bg-red-500" },
               ].map(({ label, count, color }) => (
                 <div key={label} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -267,9 +307,9 @@ export function StudentDashboard() {
               ))}
             </div>
 
-            {failed.length > 0 && (
+            {failedCount > 0 && (
               <div className="mt-4 bg-red-50 border border-red-100 rounded-xl p-3">
-                <p className="text-xs font-semibold text-red-700 mb-1">{failed.length} PDF gagal diproses</p>
+                <p className="text-xs font-semibold text-red-700 mb-1">{failedCount} PDF gagal diproses</p>
                 <p className="text-[10px] text-red-500">Kemungkinan PDF berisi gambar scan tanpa teks.</p>
               </div>
             )}
@@ -385,7 +425,7 @@ export function StudentDashboard() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold text-[#0C0D1A] tracking-tight">Literatur Saya</h2>
-            <p className="text-sm text-slate-500 mt-0.5">{myPdfs.length} dokumen PDF</p>
+            <p className="text-sm text-slate-500 mt-0.5">{documentCount} dokumen PDF</p>
           </div>
           <Button size="sm" onClick={() => setShowUploadModal(true)}>
             <Upload className="w-3.5 h-3.5" />
@@ -393,7 +433,23 @@ export function StudentDashboard() {
           </Button>
         </div>
         <div className="flex flex-col gap-2.5">
-          {myPdfs.map((pdf) => (
+          {myDashboard.isLoading && (
+            <div className="bg-white rounded-xl border border-[rgba(12,13,26,0.07)] p-8 text-center text-sm text-slate-400">
+              Memuat literatur dari API...
+            </div>
+          )}
+          {!myDashboard.isLoading && myDashboard.error && (
+            <div className="bg-white rounded-xl border border-red-100 p-8 text-center">
+              <p className="text-sm font-semibold text-red-600 mb-4">{myDashboard.error}</p>
+              <Button variant="outline" size="sm" onClick={myDashboard.retry}>Coba Lagi</Button>
+            </div>
+          )}
+          {!myDashboard.isLoading && !myDashboard.error && recentDocuments.length === 0 && (
+            <div className="bg-white rounded-xl border border-[rgba(12,13,26,0.07)] p-8 text-center text-sm text-slate-400">
+              Belum ada PDF yang diunggah.
+            </div>
+          )}
+          {!myDashboard.isLoading && !myDashboard.error && recentDocuments.map((pdf) => (
             <div key={pdf.id} className="bg-white rounded-xl border border-[rgba(12,13,26,0.07)] p-4 flex items-center gap-3 hover:border-[rgba(12,13,26,0.12)] transition-all">
               <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center shrink-0">
                 <FileText className="w-4 h-4 text-red-500" strokeWidth={1.5} />
@@ -401,8 +457,8 @@ export function StudentDashboard() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-900 line-clamp-1">{pdf.title}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <StatusDot status={pdf.indexingStatus} />
-                  <span className="text-[11px] text-slate-400 font-medium">{pdf.pages} hal. · {pdf.size}</span>
+                  <StatusDot status={pdf.index_status} />
+                  <span className="text-[11px] text-slate-400 font-medium">{pdf.total_pages} hal. · {formatBytes(pdf.file_size)}</span>
                 </div>
               </div>
             </div>
@@ -417,7 +473,23 @@ export function StudentDashboard() {
         <p className="text-sm text-slate-500 mb-6">{indexPct}% PDF berhasil diindeks</p>
         <ProgressBar value={indexPct} color="bg-gradient-to-r from-indigo-500 to-emerald-500" className="mb-6" />
         <div className="flex flex-col gap-2.5">
-          {myPdfs.map((pdf) => (
+          {myDashboard.isLoading && (
+            <div className="bg-white rounded-xl border border-[rgba(12,13,26,0.07)] p-8 text-center text-sm text-slate-400">
+              Memuat status indexing dari API...
+            </div>
+          )}
+          {!myDashboard.isLoading && myDashboard.error && (
+            <div className="bg-white rounded-xl border border-red-100 p-8 text-center">
+              <p className="text-sm font-semibold text-red-600 mb-4">{myDashboard.error}</p>
+              <Button variant="outline" size="sm" onClick={myDashboard.retry}>Coba Lagi</Button>
+            </div>
+          )}
+          {!myDashboard.isLoading && !myDashboard.error && recentDocuments.length === 0 && (
+            <div className="bg-white rounded-xl border border-[rgba(12,13,26,0.07)] p-8 text-center text-sm text-slate-400">
+              Belum ada status indexing.
+            </div>
+          )}
+          {!myDashboard.isLoading && !myDashboard.error && recentDocuments.map((pdf) => (
             <div key={pdf.id} className="bg-white rounded-xl border border-[rgba(12,13,26,0.07)] p-4">
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center shrink-0">
@@ -426,13 +498,13 @@ export function StudentDashboard() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-900 line-clamp-1">{pdf.title}</p>
                   <div className="flex items-center gap-2 mt-1.5">
-                    <StatusDot status={pdf.indexingStatus} />
-                    <span className="text-[11px] text-slate-400 font-medium">{pdf.uploadedAt}</span>
+                    <StatusDot status={pdf.index_status} />
+                    <span className="text-[11px] text-slate-400 font-medium">{formatDate(pdf.created_at)}</span>
                   </div>
-                  {pdf.failReason && (
+                  {pdf.index_message && pdf.index_status === "failed" && (
                     <div className="mt-2 flex items-start gap-1.5 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2">
                       <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
-                      <p className="text-xs text-red-600 font-medium">{pdf.failReason}</p>
+                      <p className="text-xs text-red-600 font-medium">{pdf.index_message}</p>
                     </div>
                   )}
                 </div>

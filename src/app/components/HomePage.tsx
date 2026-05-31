@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useApp } from "../context";
 import { useCatalogSearch } from "../../hooks/use-catalog-search";
+import { useRepositoryStats } from "../../hooks/use-repository-stats";
 import { Navbar } from "./Navbar";
 import { Badge, Avatar, cn, type BadgeVariant } from "./ui";
 import { fieldService } from "../../services/field-service";
@@ -54,6 +55,7 @@ export function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const catalog = useCatalogSearch(searchQuery, 5, 300);
+  const repositoryStats = useRepositoryStats();
   const selectedField = useMemo(
     () => fields.find((field) => field.apiId === selectedFieldId) ?? null,
     [fields, selectedFieldId]
@@ -260,10 +262,10 @@ export function HomePage() {
               {/* Stats */}
               <div className="grid grid-cols-4 gap-6 mt-10 pt-8" style={{ borderTop: "1px solid rgba(255,255,255,0.4)" }}>
                 {[
-                  { val: "—", lbl: "Literatur PDF" },
-                  { val: String(collections.length), lbl: "Koleksi" },
-                  { val: String(fields.length), lbl: "Bidang Ilmu" },
-                  { val: "—", lbl: "Kontributor" },
+                  { val: repositoryStats.isLoading ? "..." : repositoryStats.data ? String(repositoryStats.data.public_documents_count) : "—", lbl: "Literatur PDF" },
+                  { val: repositoryStats.isLoading ? "..." : repositoryStats.data ? String(repositoryStats.data.public_projects_count) : "—", lbl: "Koleksi" },
+                  { val: repositoryStats.isLoading ? "..." : repositoryStats.data ? String(repositoryStats.data.fields_count) : "—", lbl: "Bidang Ilmu" },
+                  { val: repositoryStats.isLoading ? "..." : repositoryStats.data ? String(repositoryStats.data.contributors_count) : "—", lbl: "Kontributor" },
                 ].map(({ val, lbl }) => (
                   <div key={lbl}>
                     <p className="text-[1.75rem] font-bold text-[#0C0D1A] tracking-[-0.03em] leading-none">{val}</p>
