@@ -477,8 +477,8 @@ export function AdminDashboard() {
               ))}
             </div>
 
-            <div className="grid lg:grid-cols-3 gap-5">
-              <div className="bg-[#0C0D1A] rounded-[1.25rem] p-6 relative overflow-hidden">
+            <div className="grid lg:grid-cols-3 gap-5 min-w-0">
+              <div className="min-w-0 bg-[#0C0D1A] rounded-[1.25rem] p-6 relative overflow-hidden">
                 <div className="absolute -top-6 -right-6 w-28 h-28 bg-indigo-500/10 rounded-full" />
                 <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-4">Kesehatan Indexing</p>
                 <div className="relative z-10">
@@ -505,7 +505,7 @@ export function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="lg:col-span-2 bg-white rounded-[1.25rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-5">
+              <div className="lg:col-span-2 min-w-0 bg-white rounded-[1.25rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-[#0C0D1A] flex items-center gap-2 text-sm">
                     <TrendingUp className="w-4 h-4 text-indigo-600" />
@@ -535,11 +535,11 @@ export function AdminDashboard() {
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
                   {adminDashboard.data?.failed_documents.map((document) => (
-                    <div key={document.id} className="bg-white border border-red-100 rounded-xl p-3.5 flex items-start gap-3">
+                    <div key={document.id} className="bg-white border border-red-100 rounded-xl p-3.5 flex items-start gap-3 min-w-0">
                       <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 line-clamp-1">{document.title}</p>
-                        <p className="text-[11px] text-red-600 mt-0.5">{document.index_message || "Indexing gagal."}</p>
+                        <p className="text-sm font-semibold text-slate-900 line-clamp-1 break-words">{document.title}</p>
+                        <p className="text-[11px] text-red-600 mt-0.5 break-words">{document.index_message || "Indexing gagal."}</p>
                       </div>
                       <Button size="xs" variant="secondary" onClick={() => handleReindexDocument(document)}>
                         <RefreshCw className="w-3 h-3" />
@@ -563,13 +563,13 @@ export function AdminDashboard() {
     return (
       <div className="flex flex-col gap-3">
         {documents.map((document) => (
-          <div key={document.id} className="flex items-center gap-3 group">
+          <div key={document.id} className="flex items-center gap-3 group min-w-0">
             <div className="w-8 h-8 bg-red-50 rounded-xl flex items-center justify-center shrink-0">
               <FileText className="w-3.5 h-3.5 text-red-500" strokeWidth={1.5} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 line-clamp-1">{document.title}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-sm font-semibold text-slate-900 line-clamp-1 break-words">{document.title}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5 break-words">
                 {document.owner.name} · {formatBytes(document.file_size)} · {document.total_pages} hal.
               </p>
             </div>
@@ -583,7 +583,7 @@ export function AdminDashboard() {
   function FieldsTab() {
     return (
       <div>
-        <div className="flex items-start justify-between mb-6 gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-6 gap-4">
           <div>
             <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">Manajemen</p>
             <h2 className="text-2xl font-bold text-[#0C0D1A] tracking-tight">Bidang Penelitian</h2>
@@ -613,13 +613,13 @@ export function AdminDashboard() {
             {apiFields.map((field) => {
               const IconComp = ICON_MAP[field.iconName] || Network;
               return (
-                <div key={field.id} className="bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-4 flex items-center gap-4 hover:shadow-[0_4px_14px_rgba(12,13,26,0.08)] transition-all duration-200">
+                <div key={field.id} className="bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-4 flex items-center gap-4 hover:shadow-[0_4px_14px_rgba(12,13,26,0.08)] transition-all duration-200 min-w-0">
                   <div className={cn("w-11 h-11 rounded-[14px] flex items-center justify-center shrink-0", field.bgColor)}>
                     <IconComp className={cn("w-5 h-5", field.color)} strokeWidth={1.75} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-sm text-[#0C0D1A]">{field.name}</h3>
+                      <h3 className="font-bold text-sm text-[#0C0D1A] line-clamp-1 break-words">{field.name}</h3>
                       {!field.isActive && <Badge variant="warning">Nonaktif</Badge>}
                     </div>
                     <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{field.description}</p>
@@ -702,16 +702,16 @@ export function AdminDashboard() {
           <>
             <div className="flex flex-col gap-3">
               {usersData?.items.map((item) => (
-                <div key={item.id} className="bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-4 flex items-center gap-4">
+                <div key={item.id} className="bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-4 flex items-start sm:items-center gap-4 min-w-0">
                   <Avatar initials={getInitials(item.name)} color={getAvatarColor(item.id)} size="md" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-bold text-sm text-[#0C0D1A]">{item.name}</p>
+                      <p className="font-bold text-sm text-[#0C0D1A] line-clamp-1 break-words">{item.name}</p>
                       <Badge variant={item.role === "admin" ? "dark" : "indigo"}>{item.role === "admin" ? "Admin" : "Mahasiswa"}</Badge>
                       <Badge variant={item.is_active ? "mint" : "warning"}>{item.is_active ? "Aktif" : "Nonaktif"}</Badge>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{item.email} · {item.study_program} · {item.class_name}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">NIM {item.student_number} · Bergabung {formatDate(item.created_at)}</p>
+                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-1 break-words">{item.email} · {item.study_program} · {item.class_name}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 break-words">NIM {item.student_number} · Bergabung {formatDate(item.created_at)}</p>
                   </div>
                   <div className="hidden sm:flex items-center gap-2 shrink-0">
                     <Badge variant="indigo">{item.projects_count} koleksi</Badge>
@@ -781,13 +781,13 @@ export function AdminDashboard() {
           <>
             <div className="flex flex-col gap-3">
               {projectsData?.items.map((project) => (
-                <div key={project.id} className="bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-4 flex items-start gap-4">
+                <div key={project.id} className="bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-4 flex items-start gap-4 min-w-0">
                   <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
                     <BookOpen className="w-4 h-4 text-indigo-600" strokeWidth={1.75} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-[#0C0D1A] line-clamp-2">{project.title}</p>
-                    <p className="text-xs text-slate-400 mt-1 line-clamp-1">{project.description}</p>
+                    <p className="font-bold text-sm text-[#0C0D1A] line-clamp-2 break-words">{project.title}</p>
+                    <p className="text-xs text-slate-400 mt-1 line-clamp-1 break-words">{project.description}</p>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <Badge variant="indigo">{project.field.name}</Badge>
                       <Badge variant={project.visibility === "public" ? "mint" : "gray"}>{project.visibility === "public" ? "Publik" : "Privat"}</Badge>
@@ -891,16 +891,16 @@ export function AdminDashboard() {
     onDelete: () => void;
   }) {
     return (
-      <div className="bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-4 flex items-start gap-4">
+      <div className="bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-4 flex items-start gap-4 min-w-0">
         <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
           <FileText className="w-4 h-4 text-red-500" strokeWidth={1.5} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-semibold text-sm text-slate-900 line-clamp-2">{document.title}</p>
+            <p className="font-semibold text-sm text-slate-900 line-clamp-2 break-words">{document.title}</p>
             <StatusDot status={document.index_status} />
           </div>
-          <p className="text-[11px] text-slate-400 mt-1.5 line-clamp-1">
+          <p className="text-[11px] text-slate-400 mt-1.5 line-clamp-1 break-words">
             {document.original_filename} · {document.owner.name} · {document.project.title}
           </p>
           <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -913,7 +913,7 @@ export function AdminDashboard() {
           {document.index_message && document.index_status === "failed" && (
             <div className="mt-2 flex items-start gap-1.5 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2">
               <AlertTriangle className="w-3 h-3 text-red-500 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-red-600 font-medium">{document.index_message}</p>
+              <p className="text-[11px] text-red-600 font-medium break-words">{document.index_message}</p>
             </div>
           )}
         </div>
@@ -1009,7 +1009,7 @@ export function AdminDashboard() {
             <div className="flex flex-col gap-3">
               {indexingData?.items.map((document) => (
                 <div key={document.id} className={cn(
-                  "rounded-[1.125rem] border p-4 flex items-start gap-4 transition-all",
+                  "rounded-[1.125rem] border p-4 flex items-start gap-4 transition-all min-w-0",
                   document.index_status === "indexed" ? "bg-emerald-50/40 border-emerald-100" :
                   document.index_status === "failed" ? "bg-red-50/40 border-red-100" :
                   "bg-white border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)]"
@@ -1018,7 +1018,7 @@ export function AdminDashboard() {
                     <FileText className="w-4 h-4 text-red-500" strokeWidth={1.5} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-slate-900">{document.title}</p>
+                    <p className="font-semibold text-sm text-slate-900 break-words">{document.title}</p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <StatusDot status={document.index_status} />
                       <span className="text-[11px] text-slate-400">{document.owner.name} · {formatDateTime(document.indexed_at || document.created_at)}</span>
@@ -1027,7 +1027,7 @@ export function AdminDashboard() {
                     {document.index_message && (
                       <div className="mt-2 flex items-start gap-1.5 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2">
                         <AlertTriangle className="w-3 h-3 text-red-500 shrink-0 mt-0.5" />
-                        <p className="text-[11px] text-red-600 font-medium">{document.index_message}</p>
+                        <p className="text-[11px] text-red-600 font-medium break-words">{document.index_message}</p>
                       </div>
                     )}
                   </div>
@@ -1161,8 +1161,8 @@ export function AdminDashboard() {
       <Dialog.Root open={fieldModalOpen} onOpenChange={setFieldModalOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50 animate-in fade-in duration-150" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md bg-white rounded-[1.5rem] shadow-2xl shadow-black/20 overflow-hidden animate-in fade-in zoom-in-95 duration-200 mx-4">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[rgba(12,13,26,0.07)]">
+          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-2rem)] sm:w-full max-w-md bg-white rounded-[1.5rem] shadow-2xl shadow-black/20 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-5 border-b border-[rgba(12,13,26,0.07)]">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-indigo-50 rounded-xl flex items-center justify-center">
                   <Network className="w-4 h-4 text-indigo-600" strokeWidth={1.75} />
@@ -1182,7 +1182,7 @@ export function AdminDashboard() {
                 </button>
               </Dialog.Close>
             </div>
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <form
                 onSubmit={async (event) => {
                   event.preventDefault();
@@ -1240,7 +1240,7 @@ export function AdminDashboard() {
                   <input type="checkbox" name="is_active" defaultChecked={editingField?.isActive ?? true} className="w-4 h-4 rounded accent-indigo-600" />
                   Bidang aktif
                 </label>
-                <div className="flex gap-3 pt-2">
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <Dialog.Close asChild>
                     <Button type="button" variant="outline" className="flex-1">Batal</Button>
                   </Dialog.Close>

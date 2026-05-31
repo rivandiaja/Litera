@@ -82,7 +82,7 @@ function FieldCard({
         )}
       </div>
 
-      <p className={cn("text-sm leading-relaxed mb-5 line-clamp-2", isDark ? "text-slate-500" : "text-slate-500")}>
+      <p className={cn("text-sm leading-relaxed mb-5 line-clamp-2 break-words", isDark ? "text-slate-500" : "text-slate-500")}>
         {field.description || "Belum ada deskripsi bidang penelitian."}
       </p>
 
@@ -263,7 +263,7 @@ function FieldDetailView({ fieldId }: { fieldId: number }) {
                         <BookOpen className="w-4 h-4 text-indigo-600" strokeWidth={1.75} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm text-[#0C0D1A] line-clamp-2 leading-snug group-hover:text-indigo-700 transition-colors">
+                        <h3 className="font-semibold text-sm text-[#0C0D1A] line-clamp-2 break-words leading-snug group-hover:text-indigo-700 transition-colors">
                           {collection.title}
                         </h3>
                         <div className="flex items-center gap-2 mt-2">
@@ -317,8 +317,8 @@ function FieldFormModal({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50 animate-in fade-in duration-150" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md bg-white rounded-[1.5rem] shadow-2xl shadow-black/20 overflow-hidden animate-in fade-in zoom-in-95 duration-200 mx-4">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-[rgba(12,13,26,0.07)]">
+        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-2rem)] sm:w-full max-w-md bg-white rounded-[1.5rem] shadow-2xl shadow-black/20 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-5 border-b border-[rgba(12,13,26,0.07)]">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-indigo-50 rounded-xl flex items-center justify-center">
                 <Network className="w-4 h-4 text-indigo-600" strokeWidth={1.75} />
@@ -336,7 +336,7 @@ function FieldFormModal({
               </button>
             </Dialog.Close>
           </div>
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <form onSubmit={onSubmit} className="flex flex-col gap-4">
               <InputField
                 label="Nama Bidang"
@@ -363,7 +363,7 @@ function FieldFormModal({
                 <input type="checkbox" name="is_active" defaultChecked={editingField?.isActive ?? true} className="w-4 h-4 rounded accent-indigo-600" />
                 Bidang aktif
               </label>
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <Dialog.Close asChild>
                   <Button type="button" variant="outline" className="flex-1">Batal</Button>
                 </Dialog.Close>

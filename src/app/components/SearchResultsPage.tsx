@@ -231,7 +231,7 @@ export function SearchResultsPage({
                     ? "bg-indigo-50 text-indigo-700 font-semibold"
                     : "text-slate-600 hover:bg-slate-50/80 hover:text-slate-900"
                 )}>
-                <span className="line-clamp-1">{project.title}</span>
+                <span className="line-clamp-1 break-words">{project.title}</span>
                 <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-bold",
                   filterProjectId === project.id ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400")}>
                   {project.document_count}
@@ -434,10 +434,10 @@ export function SearchResultsPage({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start gap-3 mb-2.5 flex-wrap sm:flex-nowrap">
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-[#0C0D1A] leading-snug text-[0.9375rem] group-hover:text-indigo-700 transition-colors">
+                              <h3 className="font-bold text-[#0C0D1A] leading-snug text-[0.9375rem] group-hover:text-indigo-700 transition-colors break-words">
                                 {result.title}
                               </h3>
-                              <p className="text-[11px] text-slate-400 font-medium mt-1 line-clamp-1">{result.original_filename}</p>
+                              <p className="text-[11px] text-slate-400 font-medium mt-1 line-clamp-1 break-words">{result.original_filename}</p>
                             </div>
                             <div className="inline-flex items-center gap-1.5 shrink-0 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
@@ -456,14 +456,14 @@ export function SearchResultsPage({
 
                           <div className="flex items-center gap-2 text-xs text-slate-400 mb-3.5">
                             <FolderOpen className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-                            <span className="line-clamp-1 font-medium text-slate-500">{result.project.title}</span>
+                            <span className="line-clamp-1 break-words font-medium text-slate-500">{result.project.title}</span>
                             <span className="text-slate-200 shrink-0">·</span>
                             <Avatar initials={getInitials(result.owner.name)} color={getAvatarColor(result.owner.id)} size="xs" />
                             <span className="font-medium text-slate-500 shrink-0">{result.owner.name}</span>
                           </div>
 
                           {result.snippet && (
-                            <div className="bg-[#FAFAF8] border border-[rgba(12,13,26,0.07)] rounded-xl px-4 py-3 mb-4 text-[0.8125rem] text-slate-600 leading-[1.65]">
+                            <div className="bg-[#FAFAF8] border border-[rgba(12,13,26,0.07)] rounded-xl px-4 py-3 mb-4 text-[0.8125rem] text-slate-600 leading-[1.65] break-words">
                               "{highlightText(result.snippet, result.matched_terms)}"
                             </div>
                           )}

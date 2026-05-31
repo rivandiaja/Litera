@@ -224,7 +224,7 @@ export function HomePage() {
                           className="w-full text-left px-4 py-2.5 hover:bg-indigo-50/60 transition-colors"
                         >
                           <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide">Bidang</span>
-                          <p className="text-sm font-semibold text-slate-800 line-clamp-1">{field.name}</p>
+                          <p className="text-sm font-semibold text-slate-800 line-clamp-1 break-words">{field.name}</p>
                         </button>
                       ))}
                       {catalog.data.projects.slice(0, 3).map((project) => (
@@ -235,8 +235,8 @@ export function HomePage() {
                           className="w-full text-left px-4 py-2.5 hover:bg-indigo-50/60 transition-colors"
                         >
                           <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wide">Koleksi · {project.owner.name}</span>
-                          <p className="text-sm font-semibold text-slate-800 line-clamp-1">{project.title}</p>
-                          <p className="text-[11px] text-slate-400 line-clamp-1">{project.field.name}</p>
+                          <p className="text-sm font-semibold text-slate-800 line-clamp-1 break-words">{project.title}</p>
+                          <p className="text-[11px] text-slate-400 line-clamp-1 break-words">{project.field.name}</p>
                         </button>
                       ))}
                     </div>
@@ -299,7 +299,7 @@ export function HomePage() {
                         <FileText className="w-4 h-4 text-red-500" strokeWidth={1.5} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug">{r.title}</p>
+                        <p className="text-xs font-bold text-slate-900 line-clamp-2 break-words leading-snug">{r.title}</p>
                         <div className="flex items-center gap-2 mt-1.5">
                           <Badge variant="indigo">{r.field}</Badge>
                           <span className="text-[10px] text-slate-400">{r.pages} hal.</span>
@@ -488,7 +488,7 @@ export function HomePage() {
                   </div>
 
                   {/* Title */}
-                  <h3 className="font-bold text-sm text-[#0C0D1A] leading-snug line-clamp-2 group-hover:text-indigo-700 transition-colors mb-3">
+                  <h3 className="font-bold text-sm text-[#0C0D1A] leading-snug line-clamp-2 break-words group-hover:text-indigo-700 transition-colors mb-3">
                     {col.title}
                   </h3>
 

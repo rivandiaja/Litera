@@ -446,7 +446,7 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: "login" | "
                 <FileText className="w-3.5 h-3.5 text-red-400" strokeWidth={1.5} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[0.8125rem] font-semibold text-[#0C0D1A] line-clamp-2 leading-snug group-hover:text-indigo-700 transition-colors">{pdf.title}</p>
+                <p className="text-[0.8125rem] font-semibold text-[#0C0D1A] line-clamp-2 break-words leading-snug group-hover:text-indigo-700 transition-colors">{pdf.title}</p>
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className="text-[10px] font-semibold bg-indigo-100/80 text-indigo-600 px-2 py-0.5 rounded-full">{pdf.field}</span>
                   <div className="flex items-center gap-1">

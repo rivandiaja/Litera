@@ -247,11 +247,11 @@ export function StudentDashboard() {
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-5 gap-5">
+        <div className="grid lg:grid-cols-5 gap-5 min-w-0">
           {/* Activity feed */}
-          <div className="lg:col-span-3 bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-5">
+          <div className="lg:col-span-3 min-w-0 bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-5">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Aktivitas Terbaru</p>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 min-w-0">
               {myDashboard.isLoading && (
                 <p className="text-sm text-slate-400">Memuat aktivitas dari API...</p>
               )}
@@ -265,12 +265,12 @@ export function StudentDashboard() {
                 <p className="text-sm text-slate-400">Belum ada aktivitas terbaru.</p>
               )}
               {!myDashboard.isLoading && !myDashboard.error && recentActivities.map((a) => (
-                <div key={a.id} className="flex items-start gap-3">
+                <div key={a.id} className="flex items-start gap-3 min-w-0">
                   <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5", a.bg)}>
                     <a.icon className={cn("w-3.5 h-3.5", a.color)} strokeWidth={2} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-700 leading-snug">{a.msg}</p>
+                    <p className="text-sm text-slate-700 leading-snug break-words">{a.msg}</p>
                     <p className="text-xs text-slate-400 font-medium mt-0.5">{a.time}</p>
                   </div>
                 </div>
@@ -279,7 +279,7 @@ export function StudentDashboard() {
           </div>
 
           {/* Indexing widget */}
-          <div className="lg:col-span-2 bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-5">
+          <div className="lg:col-span-2 min-w-0 bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-5">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Indexing</p>
 
             <div className="flex items-end gap-2 mb-2">
@@ -345,7 +345,7 @@ export function StudentDashboard() {
                   <Badge variant="indigo">{col.fieldName}</Badge>
                   <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all" />
                 </div>
-                <h4 className="font-semibold text-sm text-[#0C0D1A] line-clamp-2 mb-3 group-hover:text-indigo-700 transition-colors">{col.title}</h4>
+                <h4 className="font-semibold text-sm text-[#0C0D1A] line-clamp-2 break-words mb-3 group-hover:text-indigo-700 transition-colors">{col.title}</h4>
                 <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
                   <span>{col.pdfCount} PDF</span>
                   <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{col.lastUpdated}</span>
@@ -405,8 +405,8 @@ export function StudentDashboard() {
                 <Badge variant="indigo">{col.fieldName}</Badge>
                 {!col.isPublic && <Badge variant="gray">Privat</Badge>}
               </div>
-              <h3 className="font-bold text-sm text-[#0C0D1A] line-clamp-2 mb-2 group-hover:text-indigo-700 transition-colors">{col.title}</h3>
-              <p className="text-xs text-slate-400 line-clamp-2 mb-4">{col.description}</p>
+              <h3 className="font-bold text-sm text-[#0C0D1A] line-clamp-2 break-words mb-2 group-hover:text-indigo-700 transition-colors">{col.title}</h3>
+              <p className="text-xs text-slate-400 line-clamp-2 break-words mb-4">{col.description}</p>
               <div className="flex items-center justify-between text-[11px] font-medium text-slate-400 pt-3 border-t border-[rgba(12,13,26,0.06)]">
                 <span>{col.pdfCount} PDF</span>
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{col.lastUpdated}</span>
@@ -457,7 +457,7 @@ export function StudentDashboard() {
                 <FileText className="w-4 h-4 text-red-500" strokeWidth={1.5} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-900 line-clamp-1">{pdf.title}</p>
+                <p className="text-sm font-semibold text-slate-900 line-clamp-1 break-words">{pdf.title}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <StatusDot status={pdf.index_status} />
                   <span className="text-[11px] text-slate-400 font-medium">{pdf.total_pages} hal. · {formatBytes(pdf.file_size)}</span>
@@ -498,7 +498,7 @@ export function StudentDashboard() {
                   <FileText className="w-4 h-4 text-red-500" strokeWidth={1.5} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 line-clamp-1">{pdf.title}</p>
+                  <p className="text-sm font-semibold text-slate-900 line-clamp-1 break-words">{pdf.title}</p>
                   <div className="flex items-center gap-2 mt-1.5">
                     <StatusDot status={pdf.index_status} />
                     <span className="text-[11px] text-slate-400 font-medium">{formatDate(pdf.created_at)}</span>
@@ -506,7 +506,7 @@ export function StudentDashboard() {
                   {pdf.index_message && pdf.index_status === "failed" && (
                     <div className="mt-2 flex items-start gap-1.5 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2">
                       <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
-                      <p className="text-xs text-red-600 font-medium">{pdf.index_message}</p>
+                      <p className="text-xs text-red-600 font-medium break-words">{pdf.index_message}</p>
                     </div>
                   )}
                 </div>
@@ -570,7 +570,7 @@ export function StudentDashboard() {
                   <Clock className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-500 transition-colors" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm text-slate-700 font-medium group-hover:text-indigo-700 transition-colors line-clamp-1">{item.query}</span>
+                  <span className="text-sm text-slate-700 font-medium group-hover:text-indigo-700 transition-colors line-clamp-1 break-words">{item.query}</span>
                   <span className="text-[11px] text-slate-400 font-medium mt-0.5 block">
                     {describeHistoryFilter(item.filters)} · {item.result_count} hasil · {new Date(item.created_at).toLocaleDateString("id-ID")}
                   </span>

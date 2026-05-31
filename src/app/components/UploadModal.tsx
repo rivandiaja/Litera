@@ -307,10 +307,10 @@ export function UploadModal() {
     <Dialog.Root open={showUploadModal} onOpenChange={(open) => !open && handleClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50 animate-in fade-in duration-150" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-xl max-h-[90vh] bg-white rounded-[1.5rem] shadow-2xl shadow-black/20 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 mx-4">
+        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-2rem)] sm:w-full max-w-xl max-h-[90vh] bg-white rounded-[1.5rem] shadow-2xl shadow-black/20 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-[rgba(12,13,26,0.07)]">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-5 border-b border-[rgba(12,13,26,0.07)]">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center">
                 <CloudUpload className="w-4.5 h-4.5 text-indigo-600" strokeWidth={1.75} />
@@ -333,7 +333,7 @@ export function UploadModal() {
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 flex flex-col gap-4">
 
             {/* Collection selector */}
             <div className="flex flex-col gap-1.5">
@@ -444,7 +444,7 @@ export function UploadModal() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-semibold text-slate-900 line-clamp-1">{file.name}</p>
+                            <p className="text-sm font-semibold text-slate-900 line-clamp-1 break-words">{file.name}</p>
                             <div className="flex items-center gap-1.5 shrink-0">
                               <StatusIcon className={cn("w-3.5 h-3.5", cfg.color, cfg.spin && "animate-spin")} strokeWidth={2} />
                               <span className={cn("text-[10px] font-bold", cfg.color)}>{cfg.label}</span>
@@ -467,7 +467,7 @@ export function UploadModal() {
                           {file.status === "failed" && file.error && (
                             <div className="mt-2 flex items-start gap-1.5 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2">
                               <AlertTriangle className="w-3 h-3 text-red-500 shrink-0 mt-0.5" />
-                              <p className="text-[11px] text-red-600 font-medium">{file.error}</p>
+                              <p className="text-[11px] text-red-600 font-medium break-words">{file.error}</p>
                             </div>
                           )}
                         </div>
@@ -489,11 +489,11 @@ export function UploadModal() {
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-[rgba(12,13,26,0.07)] flex items-center justify-between gap-3 bg-slate-50/50">
+          <div className="px-4 sm:px-6 py-4 border-t border-[rgba(12,13,26,0.07)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50">
             <p className="text-xs text-slate-400 font-medium">
               {files.length === 0 ? "Belum ada file dipilih" : `${accepted}/${files.length} diterima backend`}
             </p>
-            <div className="flex gap-2">
+            <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
               <Button variant="outline" size="sm" onClick={handleClose} disabled={isUploading}>
                 Tutup
               </Button>

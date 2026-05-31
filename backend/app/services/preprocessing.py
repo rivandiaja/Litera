@@ -27,6 +27,28 @@ TECHNICAL_TERMS = {
     "packetloss",
 }
 
+INDONESIAN_PREFIXES = (
+    "meng",
+    "meny",
+    "men",
+    "mem",
+    "me",
+    "peng",
+    "peny",
+    "pen",
+    "pem",
+    "pe",
+    "ber",
+    "bel",
+    "ter",
+    "per",
+    "pel",
+    "di",
+    "ke",
+    "se",
+)
+INDONESIAN_SUFFIXES = ("kan", "an", "nya", "lah", "kah", "tah", "pun", "ku", "mu")
+
 _stemmer = StemmerFactory().create_stemmer()
 _stopwords = set(StopWordRemoverFactory().get_stop_words())
 _url_re = re.compile(r"https?://\S+|www\.\S+")
@@ -61,12 +83,20 @@ def _is_useful_token(token: str) -> bool:
     return any(character.isalpha() for character in token)
 
 
-@lru_cache(maxsize=8192)
+@lru_cache(maxsize=65536)
 def _stem_token(token: str) -> str:
     if token in TECHNICAL_TERMS:
         return token
+    if not _looks_like_indonesian_derivation(token):
+        return token
     stemmed = _stemmer.stem(token)
     return stemmed or token
+
+
+def _looks_like_indonesian_derivation(token: str) -> bool:
+    if len(token) < 5:
+        return False
+    return token.startswith(INDONESIAN_PREFIXES) or token.endswith(INDONESIAN_SUFFIXES)
 
 
 def preprocess_tokens(text: str) -> list[str]:

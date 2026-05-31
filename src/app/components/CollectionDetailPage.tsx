@@ -259,7 +259,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
             <ChevronRight className="w-3.5 h-3.5" />
             <button onClick={() => navigate({ name: "field-detail", fieldId: collection.fieldId })} className="hover:text-indigo-900/80 transition-colors">{collection.fieldName}</button>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-indigo-900/75 font-semibold line-clamp-1 max-w-xs">{collection.title}</span>
+            <span className="text-indigo-900/75 font-semibold line-clamp-1 break-words max-w-xs">{collection.title}</span>
           </div>
 
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -297,10 +297,10 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 
-        <div className="grid lg:grid-cols-3 gap-7">
+        <div className="grid lg:grid-cols-3 gap-7 min-w-0">
 
           {/* LEFT COLUMN */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 min-w-0">
 
             {/* Collection card */}
             <div className="bg-white rounded-[1.25rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-7 mb-6">
@@ -357,7 +357,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
 
             {/* PDF list */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                   Literatur PDF ({allPdfs.length})
                 </p>
@@ -445,8 +445,8 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <h3 className="font-semibold text-sm text-[#0C0D1A] leading-snug line-clamp-2">{pdf.title}</h3>
-                            <p className="text-[11px] text-slate-400 font-medium mt-1 line-clamp-1">{pdf.original_filename}</p>
+                            <h3 className="font-semibold text-sm text-[#0C0D1A] leading-snug line-clamp-2 break-words">{pdf.title}</h3>
+                            <p className="text-[11px] text-slate-400 font-medium mt-1 line-clamp-1 break-words">{pdf.original_filename}</p>
                           </div>
                           <button className="p-1.5 text-slate-300 hover:text-slate-600 rounded-lg hover:bg-slate-100 shrink-0 transition-all" title="Aksi dokumen">
                             <MoreHorizontal className="w-3.5 h-3.5" />
@@ -472,7 +472,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                               pdf.index_status === "failed" ? "text-red-500" : "text-amber-500"
                             )} />
                             <p className={cn(
-                              "text-xs font-medium",
+                              "text-xs font-medium break-words",
                               pdf.index_status === "failed" ? "text-red-600" : "text-amber-700"
                             )}>
                               {pdf.index_message}
@@ -535,7 +535,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
           </div>
 
           {/* RIGHT SIDEBAR */}
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5 min-w-0">
 
             {/* Indexing progress card */}
             <div className="bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] shadow-[0_1px_3px_rgba(12,13,26,0.05)] p-5">
@@ -608,8 +608,8 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
       <Dialog.Root open={Boolean(editingDocument)} onOpenChange={(open) => !open && setEditingDocument(null)}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50 animate-in fade-in duration-150" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md bg-white rounded-[1.5rem] shadow-2xl shadow-black/20 overflow-hidden animate-in fade-in zoom-in-95 duration-200 mx-4">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[rgba(12,13,26,0.07)]">
+          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-2rem)] sm:w-full max-w-md bg-white rounded-[1.5rem] shadow-2xl shadow-black/20 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-5 border-b border-[rgba(12,13,26,0.07)]">
               <div>
                 <Dialog.Title className="font-bold text-[#0C0D1A] text-sm">Edit Judul Dokumen</Dialog.Title>
                 <Dialog.Description className="text-[11px] text-slate-400 font-medium mt-0.5">
@@ -622,14 +622,14 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                 </button>
               </Dialog.Close>
             </div>
-            <form onSubmit={(event) => void handleSaveDocumentTitle(event)} className="px-6 py-5">
+            <form onSubmit={(event) => void handleSaveDocumentTitle(event)} className="px-4 sm:px-6 py-5">
               <InputField
                 label="Judul PDF"
                 value={editTitle}
                 onChange={(event) => setEditTitle(event.target.value)}
                 autoFocus
               />
-              <div className="flex items-center justify-end gap-2 mt-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 mt-5">
                 <Button type="button" variant="outline" size="sm" onClick={() => setEditingDocument(null)}>
                   Batal
                 </Button>

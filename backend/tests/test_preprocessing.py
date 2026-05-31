@@ -22,3 +22,16 @@ def test_preprocess_removes_stopwords_stems_indonesian_and_preserves_technical_t
     assert "mikrotik" in tokens
     assert "routeros" in tokens
     assert "api" in tokens
+
+
+def test_preprocess_keeps_plain_english_terms_without_indonesian_affixes():
+    tokens = preprocess_tokens(
+        "Analytical review packet analysis network management protocol monitoring system."
+    )
+
+    assert "analytical" in tokens
+    assert "review" in tokens
+    assert "packet" in tokens
+    assert "analysis" in tokens
+    assert "management" in tokens
+    assert "protocol" in tokens

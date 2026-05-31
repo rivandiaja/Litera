@@ -108,10 +108,12 @@ export function CreateCollectionPage({ projectId }: { projectId?: string }) {
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate({ name: "dashboard" })}>Batal</Button>
-            <Button size="sm" onClick={handleSubmit} loading={loading}>
-              {!loading && <BookOpen className="w-3.5 h-3.5" />}
-              {isEditing ? "Simpan Perubahan" : "Simpan Koleksi"}
-            </Button>
+            <div className="hidden sm:block">
+              <Button size="sm" onClick={handleSubmit} loading={loading}>
+                {!loading && <BookOpen className="w-3.5 h-3.5" />}
+                {isEditing ? "Simpan Perubahan" : "Simpan Koleksi"}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
