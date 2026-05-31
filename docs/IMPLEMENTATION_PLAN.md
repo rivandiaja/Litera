@@ -940,3 +940,80 @@ Rekomendasi tahap berikutnya:
 - Tampilkan snippet plain text, matched terms, skor relevansi, dan halaman relevan dari endpoint search.
 - Hubungkan search history UI.
 - Tambahkan endpoint agregasi statistik jika dashboard membutuhkan angka repository yang tidak bisa dihitung dari endpoint saat ini.
+
+## 24. Progress Tahap 7B-2
+
+Status: selesai untuk integrasi frontend search engine TF-IDF, filter bidang/koleksi, catalog search, scoped search, snippet, relevant pages, PDF page open, dan search history.
+
+Yang sudah dibuat:
+
+- Type DTO frontend search di `src/types/search.ts`.
+- Service search di `src/services/search-service.ts` untuk `/search`, `/search/catalog`, `/search/history`, dan `DELETE /search/history`.
+- Hook `useLiteratureSearch`, `useCatalogSearch`, dan `useSearchHistory`.
+- Helper highlight aman di `src/lib/highlight-text.tsx` yang membangun React nodes dan tidak memakai `dangerouslySetInnerHTML`.
+- `SearchResultsPage` memakai endpoint TF-IDF nyata, bukan mock result.
+- Hasil pencarian menampilkan skor relevansi, snippet plain text, matched term highlight, field, collection, owner, upload date, relevant pages, best page, pagination, sorting, retry, empty state, dan error state.
+- Filter hasil berdasarkan `research_field_id` dan `research_project_id` dengan query ulang ke backend.
+- Tombol halaman relevan dan tombol buka PDF memakai fetch blob ber-Authorization, lalu membuka object URL dengan fragment `#page=...`; token tidak pernah dimasukkan ke URL.
+- Search bar beranda melakukan global search dengan field scope terpilih.
+- Search bar beranda menampilkan catalog suggestions dari `/search/catalog` untuk bidang dan koleksi.
+- Keyword chips beranda mengarah ke search API.
+- Navbar search mengarah ke halaman search dengan query valid.
+- Detail bidang mengirim scoped search memakai `researchFieldId`.
+- Detail koleksi mengirim scoped search memakai `researchProjectId`.
+- Dashboard mahasiswa tab riwayat memakai `/search/history`, dapat mengulang query beserta filter, dan dapat menghapus history milik user aktif.
+- Test frontend ditambahkan untuk search service, highlight helper, home search/catalog, search results, dashboard history, scoped field search, dan scoped collection search.
+
+Kontrak endpoint frontend yang dipakai:
+
+- `GET /api/v1/search?q=&research_field_id=&research_project_id=&owner_id=&page=&page_size=&sort_by=`
+- `GET /api/v1/search/catalog?q=&limit=`
+- `GET /api/v1/search/history?page=&page_size=`
+- `DELETE /api/v1/search/history`
+
+Keputusan teknis:
+
+- Tidak ada fallback diam-diam ke mock untuk halaman hasil pencarian dan search history.
+- Catalog search hanya metadata bidang/koleksi; pencarian PDF tetap melalui endpoint TF-IDF.
+- Highlight snippet dilakukan dari `snippet` dan `matched_terms` response backend sebagai plain text.
+- Filter `owner_id` sudah didukung service dan endpoint, tetapi belum diekspos sebagai kontrol UI karena belum ada endpoint daftar user yang aman untuk mahasiswa.
+- Navbar tidak diberi autocomplete katalog agar layout hasil export tetap stabil.
+- State-based navigation tetap dipertahankan; tidak ada URL routing baru.
+- Sorting yang dipakai mengikuti backend: `relevance`, `newest`, `title_asc`, dan `title_desc`.
+
+Area yang sengaja belum dibuat pada tahap ini:
+
+- Backend baru, database baru, migration baru, auth baru, upload PDF baru, atau perubahan algoritma indexing/ranking.
+- Dashboard admin penuh untuk users/projects/documents/indexing.
+- Endpoint agregasi statistik repository.
+- Semantic search, embedding, vector database, Elasticsearch, atau library search engine siap pakai.
+- Penghapusan mock data pada area dashboard/statistik yang belum memiliki endpoint.
+
+Risiko dan mitigasi tambahan:
+
+- Risiko: query kosong memicu API call tidak perlu. Mitigasi: frontend menolak query kosong dan hook menahan search jika query kurang dari 2 karakter.
+- Risiko: snippet dari dokumen dapat mengandung karakter berbahaya. Mitigasi: backend mengirim plain text dan frontend merender React text nodes, bukan HTML mentah.
+- Risiko: PDF private bocor melalui URL object. Mitigasi: PDF diambil lewat endpoint authenticated dan token tidak ada di URL; object URL direvoke terjadwal.
+- Risiko: hasil search terlihat kosong jika dataset belum memiliki dokumen `indexed`. Mitigasi: empty state eksplisit dan manual test harus memakai PDF teks yang berhasil indexed.
+
+Perintah verifikasi Tahap 7B-2:
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+python -m pytest
+
+cd ..
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+git diff --check
+```
+
+Rekomendasi tahap berikutnya:
+
+- Integrasikan dashboard admin untuk users, seluruh koleksi, seluruh PDF, monitoring indexing, dan re-index massal.
+- Tambahkan endpoint agregasi statistik yang dibutuhkan dashboard agar placeholder/mock statistik dapat diganti.
+- Tambahkan fixture dataset demo PDF teks 20-50 dokumen untuk validasi ranking dan presentasi.
+- Pertimbangkan URL routing setelah fitur inti stabil, tanpa rebuild desain.

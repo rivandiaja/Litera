@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { AppContext, type AppContextType } from "../context";
 import { ResearchFieldsPage } from "./ResearchFieldsPage";
 import type { User } from "../../types/auth";
@@ -22,9 +22,10 @@ vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({ user: mockUser }),
 }));
 
+const navigate = vi.fn();
 const appContext: AppContextType = {
   page: { name: "fields" },
-  navigate: vi.fn(),
+  navigate,
   showUploadModal: false,
   setShowUploadModal: vi.fn(),
   setUploadTargetCollectionId: vi.fn(),
@@ -44,6 +45,7 @@ function renderPage() {
 describe("ResearchFieldsPage", () => {
   beforeEach(() => {
     mockUser = adminUser;
+    navigate.mockReset();
     vi.restoreAllMocks();
   });
 
@@ -116,5 +118,52 @@ describe("ResearchFieldsPage", () => {
 
     expect(await screen.findByText("Server gagal memuat bidang")).toBeInTheDocument();
     expect(screen.queryByText("Jaringan Komputer")).not.toBeInTheDocument();
+  });
+
+  it("runs scoped search from field detail with research_field_id", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/fields/1")) {
+        return new Response(JSON.stringify({
+          id: 1,
+          name: "Jaringan Komputer",
+          slug: "jaringan-komputer",
+          description: "Monitoring jaringan dan SNMP",
+          icon: "Network",
+          is_active: true,
+          project_count: 1,
+          created_at: "2026-01-01T00:00:00",
+          updated_at: "2026-01-01T00:00:00",
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({
+        items: [],
+        pagination: { page: 1, page_size: 100, total: 0, total_pages: 0 },
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }));
+
+    render(
+      <AppContext.Provider value={{ ...appContext, page: { name: "field-detail", fieldId: "1" } }}>
+        <ResearchFieldsPage fieldId="1" />
+      </AppContext.Provider>
+    );
+
+    const input = await screen.findByPlaceholderText("Cari dalam Jaringan Komputer...");
+    fireEvent.change(input, { target: { value: "monitoring snmp" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cari" }));
+
+    expect(navigate).toHaveBeenCalledWith({
+      name: "search",
+      query: "monitoring snmp",
+      researchFieldId: 1,
+      sortBy: "relevance",
+      page: 1,
+    });
   });
 });

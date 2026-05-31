@@ -1,10 +1,11 @@
 import { createContext, useContext } from "react";
+import type { SearchSort } from "../types/search";
 
 export type Page =
   | { name: "login" }
   | { name: "register" }
   | { name: "home" }
-  | { name: "search"; query: string }
+  | { name: "search"; query: string; researchFieldId?: number; researchProjectId?: number; ownerId?: number; sortBy?: SearchSort; page?: number }
   | { name: "fields" }
   | { name: "field-detail"; fieldId: string }
   | { name: "collection"; collectionId: string }

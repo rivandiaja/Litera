@@ -1,6 +1,6 @@
 # Litera Backend
 
-Backend Litera adalah REST API FastAPI untuk autentikasi, database, migration, seed data MVP, CRUD bidang penelitian, CRUD koleksi penelitian, CRUD dokumen PDF, multiple upload, ekstraksi teks, preprocessing Bahasa Indonesia, custom inverted index, dan search engine TF-IDF. Frontend Tahap 7B-1 sudah memakai endpoint auth, fields, projects, dan documents. Endpoint search TF-IDF dan history masih menunggu integrasi UI tahap berikutnya.
+Backend Litera adalah REST API FastAPI untuk autentikasi, database, migration, seed data MVP, CRUD bidang penelitian, CRUD koleksi penelitian, CRUD dokumen PDF, multiple upload, ekstraksi teks, preprocessing Bahasa Indonesia, custom inverted index, dan search engine TF-IDF. Frontend Tahap 7B-2 sudah memakai endpoint auth, fields, projects, documents, search TF-IDF, catalog search, dan search history.
 
 ## Prerequisite
 
@@ -246,4 +246,4 @@ Snippet dibuat dari `document_pages.raw_text` pada halaman terbaik, bukan dari `
 ## Belum Dibuat pada Tahap Ini
 
 - Endpoint admin lengkap untuk user/document moderation.
-- Integrasi frontend untuk search TF-IDF UI dan search history.
+- Endpoint agregasi statistik khusus untuk dashboard admin dan dashboard mahasiswa.

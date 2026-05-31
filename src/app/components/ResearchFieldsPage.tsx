@@ -172,6 +172,10 @@ function FieldDetailView({ fieldId }: { fieldId: number }) {
   }
 
   const IconComp = ICON_MAP[field.iconName] || BookOpen;
+  const runScopedSearch = () => {
+    const query = searchQuery.trim() || field.name;
+    navigate({ name: "search", query, researchFieldId: field.apiId, sortBy: "relevance", page: 1 });
+  };
 
   return (
     <div className="min-h-screen bg-[#F5F4F1]">
@@ -223,12 +227,17 @@ function FieldDetailView({ fieldId }: { fieldId: number }) {
             <input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              onKeyDown={(event) => event.key === "Enter" && navigate({ name: "search", query: searchQuery || field.name })}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  runScopedSearch();
+                }
+              }}
               placeholder={`Cari dalam ${field.name}...`}
               className="flex-1 px-3 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
             />
           </div>
-          <Button onClick={() => navigate({ name: "search", query: searchQuery || field.name })}>
+          <Button onClick={runScopedSearch}>
             <Search className="w-4 h-4" />
             Cari
           </Button>

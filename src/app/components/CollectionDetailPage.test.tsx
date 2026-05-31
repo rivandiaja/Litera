@@ -237,4 +237,22 @@ describe("CollectionDetailPage", () => {
     ));
     expect(notifyDocumentsChanged).toHaveBeenCalled();
   });
+
+  it("runs scoped search from collection detail with research_project_id", async () => {
+    vi.stubGlobal("fetch", createFetchMock());
+
+    renderPage();
+
+    const input = await screen.findByPlaceholderText("Cari dalam koleksi ini...");
+    fireEvent.change(input, { target: { value: "mikrotik api" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(navigate).toHaveBeenCalledWith({
+      name: "search",
+      query: "mikrotik api",
+      researchProjectId: 1,
+      sortBy: "relevance",
+      page: 1,
+    });
+  });
 });

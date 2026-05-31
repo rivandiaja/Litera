@@ -309,48 +309,6 @@ export const PDFS: PDF[] = [
   },
 ];
 
-export const SEARCH_RESULTS = [
-  {
-    pdfId: "p1",
-    title: "Monitoring Optical Network Unit Berbasis SNMP",
-    collectionId: "c1",
-    collectionTitle: "Perancangan Network Monitoring System Terintegrasi",
-    fieldName: "Jaringan Komputer",
-    owner: OWNERS[0],
-    pages: 12,
-    uploadedAt: "2024-11-10",
-    relevance: 91,
-    matchPages: [4, 7, 10],
-    excerpt: "...sistem monitoring <mark>ONU</mark> berbasis <mark>SNMP</mark> yang memungkinkan pemantauan <mark>redaman sinyal optik</mark> secara real-time menggunakan OID khusus untuk parameter jaringan optik...",
-  },
-  {
-    pdfId: "p2",
-    title: "Analisis Performa GPON pada Jaringan FTTH di Lingkungan Urban",
-    collectionId: "c1",
-    collectionTitle: "Perancangan Network Monitoring System Terintegrasi",
-    fieldName: "Jaringan Komputer",
-    owner: OWNERS[0],
-    pages: 18,
-    uploadedAt: "2024-11-12",
-    relevance: 84,
-    matchPages: [3, 8, 14],
-    excerpt: "...pengukuran <mark>redaman</mark> optik pada jaringan GPON menunjukkan nilai rata-rata 18.4 dB. Monitoring dilakukan menggunakan agen <mark>SNMP</mark> pada setiap <mark>ONU</mark> yang terhubung...",
-  },
-  {
-    pdfId: "p3",
-    title: "Perancangan Sistem Manajemen Bandwidth PPPoE dengan Mikrotik",
-    collectionId: "c1",
-    collectionTitle: "Perancangan Network Monitoring System Terintegrasi",
-    fieldName: "Jaringan Komputer",
-    owner: OWNERS[0],
-    pages: 15,
-    uploadedAt: "2024-11-15",
-    relevance: 76,
-    matchPages: [2, 9],
-    excerpt: "...konfigurasi <mark>SNMP</mark> trap untuk monitoring status koneksi PPPoE pada OLT ZTE C320. Threshold <mark>redaman</mark> ditetapkan sebagai trigger alarm otomatis...",
-  },
-];
-
 export const STATS = {
   totalLiteratur: 1248,
   totalKoleksi: 186,

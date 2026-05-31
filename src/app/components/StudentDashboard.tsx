@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useApp } from "../context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useSearchHistory } from "../../hooks/use-search-history";
 import { getSafeErrorMessage } from "../../lib/api-error";
 import { adaptProject, getAvatarColor, getInitials, type ProjectDisplay } from "../../lib/domain-display";
 import { projectService } from "../../services/project-service";
@@ -24,14 +25,6 @@ const ACTIVITY = [
   { icon: Search, color: "text-sky-500", bg: "bg-sky-50", msg: "Pencarian 'monitoring redaman onu' menghasilkan 3 hasil relevan", time: "4 hari lalu" },
 ];
 
-const SEARCH_HISTORY = [
-  "monitoring redaman onu menggunakan snmp",
-  "GPON jaringan FTTH urban",
-  "deep learning object detection real-time YOLO",
-  "smart home ESP32 MQTT automasi",
-  "analisis sentimen twitter ensemble learning",
-];
-
 const NAV_ITEMS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Ringkasan", icon: LayoutDashboard },
   { id: "collections", label: "Koleksi Saya", icon: BookOpen },
@@ -42,13 +35,16 @@ const NAV_ITEMS: { id: Tab; label: string; icon: LucideIcon }[] = [
 ];
 
 export function StudentDashboard() {
-  const { navigate, setShowUploadModal } = useApp();
+  const { page, navigate, setShowUploadModal } = useApp();
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const initialTab = page.name === "dashboard" && page.tab ? page.tab as Tab : "overview";
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [myCollections, setMyCollections] = useState<ProjectDisplay[]>([]);
   const [collectionsLoading, setCollectionsLoading] = useState(true);
   const [collectionsError, setCollectionsError] = useState<string | null>(null);
+  const [historyPage, setHistoryPage] = useState(1);
+  const searchHistory = useSearchHistory(historyPage, 10);
 
   const myPdfs = PDFS.filter((p) => myCollections.some((c) => c.id === p.collectionId));
   const indexed = myPdfs.filter((p) => p.indexingStatus === "indexed");
@@ -81,9 +77,33 @@ export function StudentDashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    if (page.name === "dashboard" && page.tab) {
+      setActiveTab(page.tab as Tab);
+    }
+  }, [page]);
+
   function handleLogout() {
     logout();
     navigate({ name: "login" });
+  }
+
+  async function handleClearHistory() {
+    if (!window.confirm("Hapus seluruh riwayat pencarian?")) return;
+    try {
+      await searchHistory.clear();
+      toast.success("Riwayat pencarian dihapus.");
+    } catch (error) {
+      toast.error(getSafeErrorMessage(error));
+    }
+  }
+
+  function describeHistoryFilter(filters: { research_field_id: number | null; research_project_id: number | null; owner_id: number | null }) {
+    const parts = [];
+    if (filters.research_field_id) parts.push(`Bidang #${filters.research_field_id}`);
+    if (filters.research_project_id) parts.push(`Koleksi #${filters.research_project_id}`);
+    if (filters.owner_id) parts.push(`Pemilik #${filters.owner_id}`);
+    return parts.length ? parts.join(" · ") : "Global";
   }
 
   // ── Sidebar ──────────────────────────────────────────────────────────────
@@ -425,19 +445,81 @@ export function StudentDashboard() {
 
     history: (
       <div>
-        <h2 className="text-xl font-bold text-[#0C0D1A] tracking-tight mb-6">Riwayat Pencarian</h2>
-        <div className="flex flex-col gap-2">
-          {SEARCH_HISTORY.map((q, i) => (
-            <button key={i} onClick={() => navigate({ name: "search", query: q })}
-              className="group flex items-center gap-3 p-4 bg-white rounded-xl border border-[rgba(12,13,26,0.07)] hover:border-indigo-200 hover:bg-indigo-50/30 transition-all text-left">
-              <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center shrink-0">
-                <Clock className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-500 transition-colors" />
-              </div>
-              <span className="flex-1 text-sm text-slate-700 font-medium group-hover:text-indigo-700 transition-colors">{q}</span>
-              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
-            </button>
-          ))}
+        <div className="flex items-center justify-between mb-6 gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-[#0C0D1A] tracking-tight">Riwayat Pencarian</h2>
+            <p className="text-sm text-slate-500 mt-0.5">Query terbaru yang tersimpan dari endpoint backend.</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClearHistory}
+            disabled={!searchHistory.data?.items.length || searchHistory.isLoading}
+          >
+            Hapus Riwayat
+          </Button>
         </div>
+
+        {searchHistory.isLoading && (
+          <div className="bg-white rounded-xl border border-[rgba(12,13,26,0.07)] p-8 text-center text-sm text-slate-400">
+            Memuat riwayat pencarian...
+          </div>
+        )}
+
+        {!searchHistory.isLoading && searchHistory.error && (
+          <div className="bg-white rounded-xl border border-red-100 p-8 text-center">
+            <p className="text-sm font-semibold text-red-600 mb-4">{searchHistory.error}</p>
+            <Button variant="outline" size="sm" onClick={searchHistory.retry}>Coba Lagi</Button>
+          </div>
+        )}
+
+        {!searchHistory.isLoading && !searchHistory.error && searchHistory.data?.items.length === 0 && (
+          <div className="bg-white rounded-xl border border-[rgba(12,13,26,0.07)] p-8 text-center text-sm text-slate-400">
+            Belum ada riwayat pencarian.
+          </div>
+        )}
+
+        {!searchHistory.isLoading && !searchHistory.error && Boolean(searchHistory.data?.items.length) && (
+          <div className="flex flex-col gap-2">
+            {searchHistory.data?.items.map((item) => (
+              <button key={item.id} onClick={() => navigate({
+                name: "search",
+                query: item.query,
+                researchFieldId: item.filters.research_field_id ?? undefined,
+                researchProjectId: item.filters.research_project_id ?? undefined,
+                ownerId: item.filters.owner_id ?? undefined,
+                sortBy: "relevance",
+                page: 1,
+              })}
+                className="group flex items-center gap-3 p-4 bg-white rounded-xl border border-[rgba(12,13,26,0.07)] hover:border-indigo-200 hover:bg-indigo-50/30 transition-all text-left">
+                <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center shrink-0">
+                  <Clock className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm text-slate-700 font-medium group-hover:text-indigo-700 transition-colors line-clamp-1">{item.query}</span>
+                  <span className="text-[11px] text-slate-400 font-medium mt-0.5 block">
+                    {describeHistoryFilter(item.filters)} · {item.result_count} hasil · {new Date(item.created_at).toLocaleDateString("id-ID")}
+                  </span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
+              </button>
+            ))}
+
+            {searchHistory.data && searchHistory.data.pagination.total_pages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-4">
+                <Button variant="outline" size="sm" onClick={() => setHistoryPage((value) => Math.max(1, value - 1))} disabled={searchHistory.data.pagination.page <= 1}>
+                  Sebelumnya
+                </Button>
+                <span className="text-xs font-semibold text-slate-500 px-3">
+                  Halaman {searchHistory.data.pagination.page} dari {searchHistory.data.pagination.total_pages}
+                </span>
+                <Button variant="outline" size="sm" onClick={() => setHistoryPage((value) => value + 1)} disabled={searchHistory.data.pagination.page >= searchHistory.data.pagination.total_pages}>
+                  Berikutnya
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     ),
 

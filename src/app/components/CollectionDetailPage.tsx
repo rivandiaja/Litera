@@ -115,6 +115,18 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
     setShowUploadModal(true);
   }
 
+  function runCollectionSearch(rawQuery?: string) {
+    if (!collection) return;
+    const query = (rawQuery ?? searchQuery).trim() || collection.keywords[0] || collection.fieldName;
+    navigate({
+      name: "search",
+      query,
+      researchProjectId: collection.apiId,
+      sortBy: "relevance",
+      page: 1,
+    });
+  }
+
   function handleShare() {
     setCopied(true);
     toast.success("Tautan koleksi disalin!");
@@ -314,7 +326,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
 
               {/* Action buttons */}
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => navigate({ name: "search", query: collection.keywords[0] || collection.fieldName })}>
+                <Button onClick={() => runCollectionSearch(collection.keywords[0] || collection.fieldName)}>
                   <Search className="w-4 h-4" />
                   Cari dalam Koleksi
                 </Button>
@@ -364,6 +376,12 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
                   <input
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && searchQuery.trim()) {
+                        event.preventDefault();
+                        runCollectionSearch(searchQuery);
+                      }
+                    }}
                     placeholder="Cari dalam koleksi ini..."
                     className="flex-1 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
                   />
@@ -573,7 +591,7 @@ export function CollectionDetailPage({ collectionId }: { collectionId: string })
 
             {/* Quick search CTA */}
             <button
-              onClick={() => navigate({ name: "search", query: collection.keywords[0] || collection.fieldName })}
+              onClick={() => runCollectionSearch(collection.keywords[0] || collection.fieldName)}
               className="group bg-[#0C0D1A] hover:bg-[#13142A] rounded-[1.125rem] p-5 text-left transition-all"
             >
               <Search className="w-5 h-5 text-indigo-400 mb-3" strokeWidth={1.75} />

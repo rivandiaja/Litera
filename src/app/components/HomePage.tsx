@@ -1,16 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   Search, ChevronDown, BookOpen, ArrowRight,
   Network, Brain, Cpu, Database, BarChart2, Code2, FileText, Upload,
   type LucideIcon,
 } from "lucide-react";
 import { useApp } from "../context";
+import { useCatalogSearch } from "../../hooks/use-catalog-search";
 import { Navbar } from "./Navbar";
 import { Badge, Avatar, cn, type BadgeVariant } from "./ui";
 import { fieldService } from "../../services/field-service";
 import { projectService } from "../../services/project-service";
 import { getSafeErrorMessage } from "../../lib/api-error";
 import { adaptField, adaptProject, type FieldDisplay, type ProjectDisplay } from "../../lib/domain-display";
+import { toast } from "sonner";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Network, Brain, Cpu, Database, BarChart2, Code2,
@@ -46,11 +48,18 @@ export function HomePage() {
   const { navigate } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const [fieldOpen, setFieldOpen] = useState(false);
-  const [selectedField, setSelectedField] = useState("Semua Bidang");
+  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
   const [fields, setFields] = useState<FieldDisplay[]>([]);
   const [collections, setCollections] = useState<ProjectDisplay[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const catalog = useCatalogSearch(searchQuery, 5, 300);
+  const selectedField = useMemo(
+    () => fields.find((field) => field.apiId === selectedFieldId) ?? null,
+    [fields, selectedFieldId]
+  );
+  const showCatalogSuggestions = searchQuery.trim().length >= 2
+    && Boolean(catalog.data || catalog.isLoading || catalog.error);
 
   useEffect(() => {
     let active = true;
@@ -79,9 +88,24 @@ export function HomePage() {
     };
   }, []);
 
-  function handleSearch(e: React.FormEvent) {
+  function runSearch(rawQuery: string, fieldId = selectedFieldId) {
+    const query = rawQuery.trim();
+    if (!query) {
+      toast.error("Masukkan kata kunci pencarian terlebih dahulu.");
+      return;
+    }
+    navigate({
+      name: "search",
+      query,
+      researchFieldId: fieldId ?? undefined,
+      sortBy: "relevance",
+      page: 1,
+    });
+  }
+
+  function handleSearch(e: FormEvent) {
     e.preventDefault();
-    navigate({ name: "search", query: searchQuery || "monitoring jaringan" });
+    runSearch(searchQuery);
   }
 
   return (
@@ -122,13 +146,19 @@ export function HomePage() {
               </p>
 
               {/* Search bar */}
-              <form onSubmit={handleSearch}>
+              <form onSubmit={handleSearch} className="relative">
                 <div className="flex bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 8px 40px rgba(79,70,229,0.22), 0 2px 12px rgba(0,0,0,0.07)" }}>
                   <div className="flex-1 flex items-center gap-3 px-4">
                     <Search className="w-4.5 h-4.5 text-slate-400 shrink-0" />
                     <input
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          runSearch(searchQuery);
+                        }
+                      }}
                       placeholder="Cari jurnal, topik penelitian, kata kunci..."
                       className="flex-1 py-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent min-w-0"
                     />
@@ -141,20 +171,20 @@ export function HomePage() {
                       onClick={() => setFieldOpen(!fieldOpen)}
                       className="flex items-center gap-1.5 px-4 py-4 text-sm text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap"
                     >
-                      {selectedField}
+                      {selectedField?.name || "Semua Bidang"}
                       <ChevronDown className={cn("w-3.5 h-3.5 text-slate-400 transition-transform duration-200", fieldOpen && "rotate-180")} />
                     </button>
                     {fieldOpen && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setFieldOpen(false)} />
                         <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl border border-[rgba(12,13,26,0.08)] shadow-2xl shadow-black/20 z-20 overflow-hidden py-1.5">
-                          {["Semua Bidang", ...fields.map((f) => f.name)].map((f) => (
-                            <button key={f} onClick={() => { setSelectedField(f); setFieldOpen(false); }}
+                          {[{ apiId: null, name: "Semua Bidang" }, ...fields].map((field) => (
+                            <button type="button" key={field.name} onClick={() => { setSelectedFieldId(field.apiId); setFieldOpen(false); }}
                               className={cn("w-full text-left px-4 py-2 text-sm transition-colors",
-                                selectedField === f
+                                selectedFieldId === field.apiId
                                   ? "text-indigo-600 font-semibold bg-indigo-50/60"
                                   : "text-slate-600 hover:bg-slate-50/80")}>
-                              {f}
+                              {field.name}
                             </button>
                           ))}
                         </div>
@@ -165,17 +195,60 @@ export function HomePage() {
                   <button type="submit"
                     className="bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white px-6 py-2.5 m-2 rounded-xl text-sm font-semibold flex items-center gap-2 shrink-0 transition-all shadow-sm">
                     <Search className="w-4 h-4 hidden sm:block" />
-                    Cari
-                  </button>
+                  Cari
+                </button>
+              </div>
+              {showCatalogSuggestions && (
+                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl border border-[rgba(12,13,26,0.08)] shadow-2xl shadow-indigo-950/15 z-30 overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-[rgba(12,13,26,0.06)]">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Katalog Terkait</p>
+                  </div>
+                  {catalog.isLoading && (
+                    <div className="px-4 py-3 text-xs text-slate-400 font-medium">Mencari bidang dan koleksi...</div>
+                  )}
+                  {!catalog.isLoading && catalog.error && (
+                    <div className="px-4 py-3 text-xs text-red-500 font-semibold">{catalog.error}</div>
+                  )}
+                  {!catalog.isLoading && !catalog.error && catalog.data && catalog.data.fields.length === 0 && catalog.data.projects.length === 0 && (
+                    <div className="px-4 py-3 text-xs text-slate-400 font-medium">Tidak ada katalog yang cocok.</div>
+                  )}
+                  {!catalog.isLoading && !catalog.error && catalog.data && (
+                    <div className="py-1.5">
+                      {catalog.data.fields.slice(0, 3).map((field) => (
+                        <button
+                          key={`field-${field.id}`}
+                          type="button"
+                          onClick={() => navigate({ name: "field-detail", fieldId: String(field.id) })}
+                          className="w-full text-left px-4 py-2.5 hover:bg-indigo-50/60 transition-colors"
+                        >
+                          <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide">Bidang</span>
+                          <p className="text-sm font-semibold text-slate-800 line-clamp-1">{field.name}</p>
+                        </button>
+                      ))}
+                      {catalog.data.projects.slice(0, 3).map((project) => (
+                        <button
+                          key={`project-${project.id}`}
+                          type="button"
+                          onClick={() => navigate({ name: "collection", collectionId: String(project.id) })}
+                          className="w-full text-left px-4 py-2.5 hover:bg-indigo-50/60 transition-colors"
+                        >
+                          <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wide">Koleksi · {project.owner.name}</span>
+                          <p className="text-sm font-semibold text-slate-800 line-clamp-1">{project.title}</p>
+                          <p className="text-[11px] text-slate-400 line-clamp-1">{project.field.name}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </form>
+              )}
+            </form>
 
               {/* Keyword pills */}
               <div className="flex flex-wrap gap-2 mt-4 items-center">
                 <span className="text-[11px] text-slate-600 font-semibold">Populer:</span>
                 {KEYWORDS.map((kw) => (
                   <button key={kw}
-                    onClick={() => navigate({ name: "search", query: kw })}
+                    onClick={() => runSearch(kw, null)}
                     className="text-[11px] font-semibold text-indigo-700 hover:text-white hover:bg-indigo-600 border border-indigo-300/50 hover:border-indigo-600 px-3 py-1 rounded-full transition-all duration-150"
                     style={{ background: "rgba(255,255,255,0.35)" }}
                   >

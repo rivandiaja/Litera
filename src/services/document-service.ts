@@ -23,14 +23,15 @@ export function getDocumentFileUrl(documentId: number) {
   return `${getApiBaseUrl()}/documents/${documentId}/file`;
 }
 
-async function openPdfBlob(blob: Blob, filename?: string) {
+async function openPdfBlob(blob: Blob, filename?: string, page?: number | null) {
   const pdfBlob = blob.type === "application/pdf" ? blob : new Blob([blob], { type: "application/pdf" });
   const objectUrl = URL.createObjectURL(pdfBlob);
-  const openedWindow = window.open(objectUrl, "_blank", "noopener,noreferrer");
+  const targetUrl = page ? `${objectUrl}#page=${page}` : objectUrl;
+  const openedWindow = window.open(targetUrl, "_blank", "noopener,noreferrer");
 
   if (!openedWindow) {
     const anchor = document.createElement("a");
-    anchor.href = objectUrl;
+    anchor.href = targetUrl;
     anchor.download = filename || "litera-document.pdf";
     anchor.rel = "noopener noreferrer";
     document.body.append(anchor);
@@ -67,9 +68,9 @@ export const documentService = {
     });
   },
 
-  async openDocumentFile(documentId: number, filename?: string) {
+  async openDocumentFile(documentId: number, filename?: string, page?: number | null) {
     const blob = await this.fetchDocumentFileBlob(documentId);
-    return openPdfBlob(blob, filename);
+    return openPdfBlob(blob, filename, page);
   },
 
   updateDocumentTitle(documentId: number, payload: DocumentUpdatePayload) {

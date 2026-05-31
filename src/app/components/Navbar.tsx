@@ -31,7 +31,11 @@ export function Navbar({ transparent = false }: { transparent?: boolean }) {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    if (searchQuery.trim()) { navigate({ name: "search", query: searchQuery }); setSearchOpen(false); }
+    const query = searchQuery.trim();
+    if (query) {
+      navigate({ name: "search", query, sortBy: "relevance", page: 1 });
+      setSearchOpen(false);
+    }
   }
 
   function handleLogout() {
@@ -163,7 +167,7 @@ export function Navbar({ transparent = false }: { transparent?: boolean }) {
         {mobileOpen && (
           <div className="lg:hidden border-t border-[rgba(12,13,26,0.07)] py-3 flex flex-col gap-1 pb-4">
             {/* Mobile search */}
-            <form onSubmit={(e) => { e.preventDefault(); navigate({ name: "search", query: searchQuery }); setMobileOpen(false); }} className="px-1 mb-2">
+            <form onSubmit={(e) => { e.preventDefault(); const query = searchQuery.trim(); if (query) { navigate({ name: "search", query, sortBy: "relevance", page: 1 }); setMobileOpen(false); } }} className="px-1 mb-2">
               <div className="flex items-center bg-slate-100 rounded-xl overflow-hidden">
                 <Search className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
                 <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Cari literatur..." className="flex-1 px-3 py-2.5 text-sm bg-transparent focus:outline-none" />

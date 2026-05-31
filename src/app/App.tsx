@@ -58,7 +58,16 @@ function AppShell() {
       case "home":
         return <HomePage />;
       case "search":
-        return <SearchResultsPage query={page.query} />;
+        return (
+          <SearchResultsPage
+            query={page.query}
+            initialResearchFieldId={page.researchFieldId}
+            initialResearchProjectId={page.researchProjectId}
+            initialOwnerId={page.ownerId}
+            initialSortBy={page.sortBy}
+            initialPage={page.page}
+          />
+        );
       case "fields":
         return <ResearchFieldsPage />;
       case "field-detail":
