@@ -1,0 +1,9 @@
+backend/
+demo-data/
+docs/
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3

@@ -4,7 +4,7 @@ Backend Litera adalah REST API FastAPI untuk autentikasi, database, migration, s
 
 ## Prerequisite
 
-- Python 3.14 atau versi Python modern yang kompatibel.
+- Python 3.12 atau versi Python modern yang kompatibel.
 - Windows PowerShell.
 
 ## Setup
@@ -28,6 +28,22 @@ MAX_PDF_SIZE_MB=15
 ```
 
 Folder upload dibuat otomatis. File PDF aktual diabaikan Git, sementara `uploads/.gitkeep` tetap dilacak.
+
+Untuk deployment, backend juga mendukung PostgreSQL dan S3-compatible private storage:
+
+```env
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/postgres
+FRONTEND_ORIGINS=https://litera.example.vercel.app
+STORAGE_BACKEND=s3
+S3_ENDPOINT_URL=https://PROJECT_REF.storage.supabase.co/storage/v1/s3
+S3_REGION=PROJECT_REGION
+S3_ACCESS_KEY_ID=secret
+S3_SECRET_ACCESS_KEY=secret
+S3_BUCKET=litera-pdfs
+S3_PREFIX=documents
+```
+
+`DATABASE_URL` PostgreSQL otomatis dinormalisasi ke driver `psycopg`. PDF pada mode S3 diunduh ke temporary directory hanya selama ekstraksi teks. Panduan deployment lengkap tersedia di `../docs/FREE_DEPLOYMENT_GUIDE.md`.
 
 ## Migration
 
@@ -350,3 +366,4 @@ Pesan kegagalan indexing yang berpotensi berisi traceback mentah disanitasi sebe
 - Metode IR: `../docs/IR_METHOD.md`.
 - Panduan demo: `../docs/DEMO_GUIDE.md`.
 - Checklist penyerahan: `../docs/SUBMISSION_CHECKLIST.md`.
+- Deployment gratis: `../docs/FREE_DEPLOYMENT_GUIDE.md`.

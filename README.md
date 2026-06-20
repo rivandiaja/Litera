@@ -43,6 +43,64 @@ Lalu buka:
 http://127.0.0.1:5173
 ```
 
+## Akses Tunnel Cloudflare
+
+Quick tunnel Cloudflare dipakai untuk demo dari perangkat lain. URL `trycloudflare.com` bersifat sementara dan berubah setiap kali tunnel dibuat ulang.
+
+Untuk deployment publik gratis yang persisten, gunakan Vercel + Render + Supabase sesuai [panduan deployment gratis](docs/FREE_DEPLOYMENT_GUIDE.md).
+
+Jalankan backend terlebih dahulu:
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Di terminal lain, jalankan frontend khusus tunnel pada port `5174`. Nilai `VITE_API_BASE_URL=/api/v1` membuat frontend memakai proxy Vite, sehingga frontend dan API bisa diakses dari satu link tunnel yang sama.
+
+```powershell
+$env:VITE_API_BASE_URL = "/api/v1"
+npm run dev -- --host=127.0.0.1 --port=5174
+```
+
+Di terminal lain lagi, jalankan Cloudflare Tunnel:
+
+```powershell
+$TunnelConfig = Join-Path $env:TEMP "litera-cloudflared.yml"
+Set-Content -Path $TunnelConfig -Value "loglevel: info" -Encoding utf8
+cloudflared --config $TunnelConfig tunnel --no-autoupdate --protocol http2 --http-host-header 127.0.0.1:5174 --url http://127.0.0.1:5174
+```
+
+Buka URL yang muncul pada output Cloudflared, misalnya:
+
+```text
+https://nama-acak.trycloudflare.com
+```
+
+Cek API melalui tunnel:
+
+```powershell
+Invoke-RestMethod https://nama-acak.trycloudflare.com/api/v1/health
+```
+
+Catatan: gunakan `--config $TunnelConfig` agar quick tunnel tidak terbawa konfigurasi global Cloudflared di `~/.cloudflared/config.yml`.
+
+Untuk menghentikan frontend, backend, dan tunnel Litera:
+
+```powershell
+Get-NetTCPConnection -State Listen -LocalPort 5173,5174,8000 -ErrorAction SilentlyContinue |
+  ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+
+Get-CimInstance Win32_Process |
+  Where-Object {
+    $_.CommandLine -like "*127.0.0.1:5174*" -or
+    $_.CommandLine -like "*--port=5174*" -or
+    $_.CommandLine -like "*uvicorn app.main:app*"
+  } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+```
+
 ## Pemeriksaan Frontend
 
 ```bash
@@ -68,7 +126,7 @@ Backend tahap awal berada di folder:
 backend/
 ```
 
-Backend menggunakan FastAPI, SQLAlchemy, SQLite, Alembic, PyJWT, `pwdlib[argon2]`, PyMuPDF, Sastrawi, dan `python-multipart`. Pada tahap saat ini backend menyediakan health check, register, login, `/auth/me`, migration, seed data demo, CRUD bidang/koleksi, CRUD dokumen PDF, multiple upload, BackgroundTasks indexing, inverted index eksplisit, global search TF-IDF, catalog search, search history, statistik repository, dashboard mahasiswa, dashboard admin, admin users, admin projects, admin documents, dan admin indexing. Frontend memakai endpoint tersebut tanpa fallback mock pada area yang sudah terintegrasi.
+Backend menggunakan FastAPI, SQLAlchemy, SQLite lokal atau PostgreSQL deployment, Alembic, PyJWT, `pwdlib[argon2]`, PyMuPDF, Sastrawi, dan `python-multipart`. File PDF dapat memakai folder lokal atau S3-compatible private storage. Pada tahap saat ini backend menyediakan health check, register, login, `/auth/me`, migration, seed data demo, CRUD bidang/koleksi, CRUD dokumen PDF, multiple upload, BackgroundTasks indexing, inverted index eksplisit, global search TF-IDF, catalog search, search history, statistik repository, dashboard mahasiswa, dashboard admin, admin users, admin projects, admin documents, dan admin indexing. Frontend memakai endpoint tersebut tanpa fallback mock pada area yang sudah terintegrasi.
 
 Setup singkat:
 
@@ -255,13 +313,14 @@ Endpoint utama tersedia di bawah `/api/v1`:
 - Panduan demo presentasi: `docs/DEMO_GUIDE.md`.
 - Checklist penyerahan: `docs/SUBMISSION_CHECKLIST.md`.
 - Rencana implementasi lengkap: `docs/IMPLEMENTATION_PLAN.md`.
+- Deployment gratis Vercel, Render, dan Supabase: `docs/FREE_DEPLOYMENT_GUIDE.md`.
 
 ## Keterbatasan MVP
 
 - OCR untuk PDF scan belum didukung.
 - Search semantic, embedding, vector database, dan Elasticsearch sengaja tidak digunakan.
-- Dataset dan storage masih lokal.
-- SQLite cocok untuk MVP dan demo kelas, belum untuk deployment multi-user besar.
+- Development default memakai SQLite dan storage lokal; deployment gratis mendukung Supabase PostgreSQL dan private S3-compatible Storage.
+- Render Free memiliki cold start dan indexing masih berjalan di proses API, belum memakai worker terpisah.
 - Tab pengaturan platform admin masih statis.
 
 ## Troubleshooting
@@ -271,7 +330,7 @@ Endpoint utama tersedia di bawah `/api/v1`:
 - PDF gagal indexing: pastikan PDF memiliki text layer, bukan scan.
 - Upload ditolak: cek ekstensi `.pdf`, magic bytes, dan ukuran file.
 - Frontend gagal call API: cek `VITE_API_BASE_URL`.
-- CORS error: cek `FRONTEND_ORIGIN` di backend `.env`.
+- CORS error: cek `FRONTEND_ORIGIN` atau `FRONTEND_ORIGINS` di backend `.env`.
 
 ## Status Proyek
 

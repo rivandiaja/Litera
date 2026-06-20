@@ -227,10 +227,10 @@ def reindex_document(
 ) -> Document:
     document = get_document_for_write(db, document_id, current_user)
     try:
-        pdf_path = file_storage.resolve_document_path(document.file_path)
+        file_exists = file_storage.document_file_exists(document.file_path)
     except file_storage.FileStorageError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Original PDF file is missing") from exc
-    if not pdf_path.exists():
+    if not file_exists:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Original PDF file is missing")
 
     indexer.clear_document_index(db, document.id)
@@ -244,11 +244,8 @@ def reindex_document(
     return document
 
 
-def get_document_file_path(document: Document) -> Path:
+def get_document_file_content(document: Document) -> bytes:
     try:
-        path = file_storage.resolve_document_path(document.file_path)
+        return file_storage.read_document_file(document.file_path)
     except file_storage.FileStorageError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PDF file not found") from exc
-    if not path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PDF file not found")
-    return path

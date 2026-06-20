@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Document, DocumentPage, DocumentStats, IndexPosting, IndexStatus, IndexTerm, utc_now
 from app.db.session import SessionLocal
-from app.services.file_storage import FileStorageError, resolve_document_path
+from app.services.file_storage import FileStorageError, materialize_document_path
 from app.services.pdf_extractor import PdfNoTextError, PdfReadError, extract_pdf_text
 from app.services.preprocessing import preprocess_text, preprocess_tokens
 
@@ -116,13 +116,11 @@ def index_document(db: Session, document_id: int) -> None:
     db.commit()
 
     try:
-        pdf_path = resolve_document_path(document.file_path)
-        if not pdf_path.exists():
-            raise FileStorageError("File PDF tidak ditemukan di storage.")
-        document = db.get(Document, document_id)
-        if document is None:
-            return
-        build_inverted_index_for_document(db, document, pdf_path)
+        with materialize_document_path(document.file_path) as pdf_path:
+            document = db.get(Document, document_id)
+            if document is None:
+                return
+            build_inverted_index_for_document(db, document, pdf_path)
         db.commit()
     except PdfNoTextError as exc:
         db.rollback()

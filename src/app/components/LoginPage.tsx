@@ -420,7 +420,7 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: "login" | "
               <BookOpen className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
             <span className="font-bold text-[#0C0D1A] text-base tracking-tight">Litera</span>
-            <span className="ml-auto text-[10px] font-bold text-slate-300 uppercase tracking-widest">v2.0</span>
+            <span className="ml-auto text-[10px] font-bold text-slate-300 uppercase tracking-widest">v1.0</span>
           </div>
 
           <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-[0.12em] mb-3">Platform Literatur Akademik</p>

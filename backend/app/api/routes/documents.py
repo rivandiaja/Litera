@@ -1,5 +1,6 @@
+from urllib.parse import quote
+
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, Response, UploadFile, status
-from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
@@ -51,10 +52,15 @@ def get_document_file(
     document_id: int,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-) -> FileResponse:
+) -> Response:
     document = document_service.get_document_for_read(db, document_id, current_user)
-    path = document_service.get_document_file_path(document)
-    return FileResponse(path, media_type="application/pdf", filename=document.original_filename)
+    content = document_service.get_document_file_content(document)
+    filename = quote(document.original_filename)
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{filename}"},
+    )
 
 
 @router.post("/documents/{document_id}/reindex", response_model=DocumentRead)

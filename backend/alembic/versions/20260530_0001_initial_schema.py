@@ -38,7 +38,7 @@ def upgrade() -> None:
         sa.Column("study_program", sa.String(length=120), nullable=False),
         sa.Column("class_name", sa.String(length=50), nullable=False),
         sa.Column("role", user_role, nullable=False),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("1")),
+        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
         *timestamp_columns(),
         sa.UniqueConstraint("email", name="uq_users_email"),
         sa.UniqueConstraint("student_number", name="uq_users_student_number"),
@@ -53,7 +53,7 @@ def upgrade() -> None:
         sa.Column("slug", sa.String(length=160), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
         sa.Column("icon", sa.String(length=80), nullable=False),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("1")),
+        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
         *timestamp_columns(),
         sa.UniqueConstraint("slug", name="uq_research_fields_slug"),
     )

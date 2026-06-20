@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -5,8 +7,8 @@ from app.core.security import get_password_hash
 from app.db.models import ProjectVisibility, ResearchField, ResearchProject, User, UserRole
 from app.db.session import SessionLocal
 
-DEMO_ADMIN_PASSWORD = "AdminDemo123!"
-DEMO_STUDENT_PASSWORD = "StudentDemo123!"
+DEMO_ADMIN_PASSWORD = os.getenv("DEMO_ADMIN_PASSWORD", "AdminDemo123!")
+DEMO_STUDENT_PASSWORD = os.getenv("DEMO_STUDENT_PASSWORD", "StudentDemo123!")
 
 FIELDS = [
     ("Jaringan Komputer", "jaringan-komputer", "Infrastruktur jaringan, monitoring, routing, dan keamanan jaringan.", "Network"),

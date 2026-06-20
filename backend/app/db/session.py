@@ -5,14 +5,22 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import get_settings
 
 
-def _connect_args(database_url: str) -> dict[str, bool]:
+def _connect_args(database_url: str) -> dict[str, bool | None]:
     if database_url.startswith("sqlite"):
         return {"check_same_thread": False}
+    if database_url.startswith("postgresql+psycopg"):
+        return {"prepare_threshold": None}
     return {}
 
 
 def make_engine(database_url: str) -> Engine:
-    engine = create_engine(database_url, connect_args=_connect_args(database_url), future=True)
+    engine = create_engine(
+        database_url,
+        connect_args=_connect_args(database_url),
+        future=True,
+        pool_pre_ping=True,
+        pool_recycle=300,
+    )
 
     if database_url.startswith("sqlite"):
         @event.listens_for(engine, "connect")
