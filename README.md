@@ -47,7 +47,10 @@ http://127.0.0.1:5173
 
 Quick tunnel Cloudflare dipakai untuk demo dari perangkat lain. URL `trycloudflare.com` bersifat sementara dan berubah setiap kali tunnel dibuat ulang.
 
-Untuk deployment publik gratis yang persisten, gunakan Vercel + Render + Supabase sesuai [panduan deployment gratis](docs/FREE_DEPLOYMENT_GUIDE.md).
+Untuk deployment publik gratis, tersedia dua pilihan backend:
+
+- Northflank Sandbox + Supabase: [panduan Northflank](docs/NORTHFLANK_DEPLOYMENT_GUIDE.md).
+- Render Free + Supabase: [panduan Render](docs/FREE_DEPLOYMENT_GUIDE.md).
 
 Jalankan backend terlebih dahulu:
 
@@ -314,6 +317,7 @@ Endpoint utama tersedia di bawah `/api/v1`:
 - Checklist penyerahan: `docs/SUBMISSION_CHECKLIST.md`.
 - Rencana implementasi lengkap: `docs/IMPLEMENTATION_PLAN.md`.
 - Deployment gratis Vercel, Render, dan Supabase: `docs/FREE_DEPLOYMENT_GUIDE.md`.
+- Alternatif backend Northflank Sandbox: `docs/NORTHFLANK_DEPLOYMENT_GUIDE.md`.
 
 ## Keterbatasan MVP
 

@@ -45,6 +45,8 @@ S3_PREFIX=documents
 
 `DATABASE_URL` PostgreSQL otomatis dinormalisasi ke driver `psycopg`. PDF pada mode S3 diunduh ke temporary directory hanya selama ekstraksi teks. Panduan deployment lengkap tersedia di `../docs/FREE_DEPLOYMENT_GUIDE.md`.
 
+Image container untuk Northflank tersedia melalui `Dockerfile`. Gunakan Dockerfile path `/backend/Dockerfile`, build context `/backend`, dan expose HTTP port `8000`. Panduan lengkap tersedia di `../docs/NORTHFLANK_DEPLOYMENT_GUIDE.md`.
+
 ## Migration
 
 Database development dibuat melalui Alembic, bukan `Base.metadata.create_all()`.
@@ -367,3 +369,4 @@ Pesan kegagalan indexing yang berpotensi berisi traceback mentah disanitasi sebe
 - Panduan demo: `../docs/DEMO_GUIDE.md`.
 - Checklist penyerahan: `../docs/SUBMISSION_CHECKLIST.md`.
 - Deployment gratis: `../docs/FREE_DEPLOYMENT_GUIDE.md`.
+- Deployment Northflank: `../docs/NORTHFLANK_DEPLOYMENT_GUIDE.md`.

@@ -1,0 +1,15 @@
+.venv/
+.env
+.env.*
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+tests/
+test_uploads/
+uploads/*
+!uploads/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
+*.pyc
+*.pyo
