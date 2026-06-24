@@ -26,10 +26,14 @@ const NAV_ITEMS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: "profile", label: "Profil", icon: User },
 ];
 
+function isDashboardTab(value: string | undefined): value is Tab {
+  return NAV_ITEMS.some((item) => item.id === value);
+}
+
 export function StudentDashboard() {
   const { page, navigate, setShowUploadModal } = useApp();
   const { user, logout } = useAuth();
-  const initialTab = page.name === "dashboard" && page.tab ? page.tab as Tab : "overview";
+  const initialTab = page.name === "dashboard" && isDashboardTab(page.tab) ? page.tab : "overview";
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [myCollections, setMyCollections] = useState<ProjectDisplay[]>([]);
@@ -106,10 +110,15 @@ export function StudentDashboard() {
   }, []);
 
   useEffect(() => {
-    if (page.name === "dashboard" && page.tab) {
-      setActiveTab(page.tab as Tab);
+    if (page.name === "dashboard" && isDashboardTab(page.tab)) {
+      setActiveTab(page.tab);
     }
   }, [page]);
+
+  function selectTab(tab: Tab) {
+    setActiveTab(tab);
+    navigate({ name: "dashboard", tab });
+  }
 
   function handleLogout() {
     logout();
@@ -160,7 +169,7 @@ export function StudentDashboard() {
             return (
               <button
                 key={item.id}
-                onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+                onClick={() => { selectTab(item.id); setSidebarOpen(false); }}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[0.8125rem] font-semibold transition-all duration-150 mb-0.5 text-left",
                   isActive
@@ -231,10 +240,10 @@ export function StudentDashboard() {
         {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { val: projectCount, lbl: "Koleksi", icon: BookOpen, iconBg: "bg-indigo-50", iconColor: "text-indigo-500", action: () => setActiveTab("collections") },
-            { val: documentCount, lbl: "PDF Diunggah", icon: FileText, iconBg: "bg-violet-50", iconColor: "text-violet-500", action: () => setActiveTab("pdfs") },
-            { val: totalPages, lbl: "Hal. Terindeks", icon: TrendingUp, iconBg: "bg-emerald-50", iconColor: "text-emerald-500", action: () => setActiveTab("indexing") },
-            { val: processingCount, lbl: "Proses Indexing", icon: Loader2, iconBg: "bg-amber-50", iconColor: "text-amber-500", action: () => setActiveTab("indexing") },
+            { val: projectCount, lbl: "Koleksi", icon: BookOpen, iconBg: "bg-indigo-50", iconColor: "text-indigo-500", action: () => selectTab("collections") },
+            { val: documentCount, lbl: "PDF Diunggah", icon: FileText, iconBg: "bg-violet-50", iconColor: "text-violet-500", action: () => selectTab("pdfs") },
+            { val: totalPages, lbl: "Hal. Terindeks", icon: TrendingUp, iconBg: "bg-emerald-50", iconColor: "text-emerald-500", action: () => selectTab("indexing") },
+            { val: processingCount, lbl: "Proses Indexing", icon: Loader2, iconBg: "bg-amber-50", iconColor: "text-amber-500", action: () => selectTab("indexing") },
           ].map(({ val, lbl, icon: Icon, iconBg, iconColor, action }) => (
             <button key={lbl} onClick={action}
               className="group bg-white rounded-[1.125rem] border border-[rgba(12,13,26,0.07)] p-5 text-left hover:shadow-[0_4px_14px_rgba(12,13,26,0.09)] hover:-translate-y-0.5 transition-all duration-200">
@@ -677,7 +686,7 @@ export function StudentDashboard() {
         <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-[rgba(12,13,26,0.07)] px-2 py-2 z-40 shadow-[0_-4px_20px_rgba(12,13,26,0.08)]">
           <div className="flex items-center justify-around">
             {NAV_ITEMS.slice(0, 5).map((item) => (
-              <button key={item.id} onClick={() => setActiveTab(item.id)}
+              <button key={item.id} onClick={() => selectTab(item.id)}
                 className={cn(
                   "flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all",
                   activeTab === item.id ? "text-indigo-600" : "text-slate-400"

@@ -43,6 +43,8 @@ Lalu buka:
 http://127.0.0.1:5173
 ```
 
+Frontend memakai routing SPA berbasis History API. Halaman seperti `/dashboard?tab=history`, `/fields/1`, `/collections/1`, dan `/search?q=...` aman di-refresh karena Vercel diarahkan ulang ke `index.html` melalui `vercel.json`.
+
 ## Akses Tunnel Cloudflare
 
 Quick tunnel Cloudflare dipakai untuk demo dari perangkat lain. URL `trycloudflare.com` bersifat sementara dan berubah setiap kali tunnel dibuat ulang.

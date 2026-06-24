@@ -139,7 +139,7 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: "login" | "
     try {
       await register(payload);
       toast.success("Akun berhasil dibuat! Silakan masuk.");
-      setMode("login");
+      navigate({ name: "login" });
     } catch (error) {
       toast.error(getSafeErrorMessage(error));
     } finally {
@@ -239,7 +239,7 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: "login" | "
               {(["login", "register"] as const).map((m) => (
                 <button
                   key={m}
-                  onClick={() => setMode(m)}
+                  onClick={() => navigate({ name: m })}
                   className={cn(
                     "flex-1 py-2 rounded-xl text-sm font-semibold transition-all duration-200",
                     mode === m
@@ -320,7 +320,7 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: "login" | "
 
                 <p className="text-center text-[0.8125rem] text-white/55">
                   Belum punya akun?{" "}
-                  <button type="button" onClick={() => setMode("register")} className="font-bold text-white/90 hover:text-white underline underline-offset-2 transition-colors">
+                  <button type="button" onClick={() => navigate({ name: "register" })} className="font-bold text-white/90 hover:text-white underline underline-offset-2 transition-colors">
                     Daftar sekarang
                   </button>
                 </p>
@@ -383,7 +383,7 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: "login" | "
 
                 <p className="text-center text-[0.8125rem] text-white/55">
                   Sudah punya akun?{" "}
-                  <button type="button" onClick={() => setMode("login")} className="font-bold text-white/90 hover:text-white underline underline-offset-2 transition-colors">
+                  <button type="button" onClick={() => navigate({ name: "login" })} className="font-bold text-white/90 hover:text-white underline underline-offset-2 transition-colors">
                     Masuk di sini
                   </button>
                 </p>

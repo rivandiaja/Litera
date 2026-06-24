@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Toaster } from "sonner";
-import { AppContext, type Page } from "./context";
+import { AppContext, type NavigateOptions, type Page } from "./context";
+import { getPageFromCurrentLocation, syncBrowserPage } from "./routing";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { LoginPage } from "./components/LoginPage";
 import { HomePage } from "./components/HomePage";
@@ -24,27 +25,46 @@ export default function App() {
 }
 
 function AppShell() {
-  const [page, setPage] = useState<Page>({ name: "login" });
+  const [page, setPage] = useState<Page>(() => getPageFromCurrentLocation());
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadTargetCollectionId, setUploadTargetCollectionId] = useState<string | undefined>();
   const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
   const { user, isAuthenticated, isLoading } = useAuth();
   const isAdmin = user?.role === "admin";
 
+  const navigate = useCallback((p: Page, options: NavigateOptions = {}) => {
+    setPage(p);
+    syncBrowserPage(p, options.replace);
+
+    if (options.scroll === false) return;
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      // jsdom does not implement smooth scrolling during tests.
+    }
+  }, []);
+
+  useEffect(() => {
+    function handlePopState() {
+      setPage(getPageFromCurrentLocation());
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated && page.name !== "login" && page.name !== "register") {
-      setPage({ name: "login" });
+      navigate({ name: "login" }, { replace: true, scroll: false });
     }
     if (isAuthenticated && (page.name === "login" || page.name === "register")) {
-      setPage({ name: "home" });
+      navigate({ name: "home" }, { replace: true, scroll: false });
     }
-  }, [isAuthenticated, isLoading, page.name]);
-
-  function navigate(p: Page) {
-    setPage(p);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
+    if (isAuthenticated && page.name === "admin" && !isAdmin) {
+      navigate({ name: "home" }, { replace: true, scroll: false });
+    }
+  }, [isAdmin, isAuthenticated, isLoading, navigate, page.name]);
 
   function notifyDocumentsChanged() {
     setDocumentsRefreshKey((value) => value + 1);

@@ -13,9 +13,14 @@ export type Page =
   | { name: "create-collection"; projectId?: string }
   | { name: "admin"; tab?: string };
 
+export interface NavigateOptions {
+  replace?: boolean;
+  scroll?: boolean;
+}
+
 export interface AppContextType {
   page: Page;
-  navigate: (page: Page) => void;
+  navigate: (page: Page, options?: NavigateOptions) => void;
   showUploadModal: boolean;
   setShowUploadModal: (v: boolean) => void;
   uploadTargetCollectionId?: string;

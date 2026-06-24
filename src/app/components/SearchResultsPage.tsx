@@ -67,7 +67,7 @@ export function SearchResultsPage({
   const [currentQuery, setCurrentQuery] = useState(query.trim());
   const [filterFieldId, setFilterFieldId] = useState<number | null>(initialResearchFieldId ?? null);
   const [filterProjectId, setFilterProjectId] = useState<number | null>(initialResearchProjectId ?? null);
-  const [ownerId] = useState<number | null>(initialOwnerId ?? null);
+  const [ownerId, setOwnerId] = useState<number | null>(initialOwnerId ?? null);
   const [sortBy, setSortBy] = useState<SearchSort>(initialSortBy);
   const [page, setPage] = useState(initialPage);
   const [showFilters, setShowFilters] = useState(false);
@@ -105,9 +105,10 @@ export function SearchResultsPage({
     setCurrentQuery(query.trim());
     setFilterFieldId(initialResearchFieldId ?? null);
     setFilterProjectId(initialResearchProjectId ?? null);
+    setOwnerId(initialOwnerId ?? null);
     setSortBy(initialSortBy);
     setPage(initialPage);
-  }, [query, initialResearchFieldId, initialResearchProjectId, initialSortBy, initialPage]);
+  }, [query, initialResearchFieldId, initialResearchProjectId, initialOwnerId, initialSortBy, initialPage]);
 
   useEffect(() => {
     let active = true;
@@ -137,15 +138,37 @@ export function SearchResultsPage({
     };
   }, [filterFieldId]);
 
+  function navigateSearchPage(
+    nextQuery: string,
+    nextFieldId: number | null,
+    nextProjectId: number | null,
+    nextSortBy: SearchSort,
+    nextPage: number
+  ) {
+    setInputValue(nextQuery);
+    setCurrentQuery(nextQuery);
+    setFilterFieldId(nextFieldId);
+    setFilterProjectId(nextProjectId);
+    setSortBy(nextSortBy);
+    setPage(nextPage);
+    navigate({
+      name: "search",
+      query: nextQuery,
+      researchFieldId: nextFieldId ?? undefined,
+      researchProjectId: nextProjectId ?? undefined,
+      ownerId: ownerId ?? undefined,
+      sortBy: nextSortBy,
+      page: nextPage,
+    });
+  }
+
   function runSearch(nextQuery: string) {
     const trimmed = nextQuery.trim();
     if (!trimmed) {
       toast.error("Masukkan kata kunci pencarian terlebih dahulu.");
       return;
     }
-    setCurrentQuery(trimmed);
-    setInputValue(trimmed);
-    setPage(1);
+    navigateSearchPage(trimmed, filterFieldId, filterProjectId, sortBy, 1);
   }
 
   function handleSearch(event: FormEvent) {
@@ -154,26 +177,19 @@ export function SearchResultsPage({
   }
 
   function updateFieldFilter(fieldId: number | null) {
-    setFilterFieldId(fieldId);
-    setFilterProjectId(null);
-    setPage(1);
+    navigateSearchPage(currentQuery, fieldId, null, sortBy, 1);
   }
 
   function updateProjectFilter(projectId: number | null) {
-    setFilterProjectId(projectId);
-    setPage(1);
+    navigateSearchPage(currentQuery, filterFieldId, projectId, sortBy, 1);
   }
 
   function updateSort(nextSort: SearchSort) {
-    setSortBy(nextSort);
-    setPage(1);
+    navigateSearchPage(currentQuery, filterFieldId, filterProjectId, nextSort, 1);
   }
 
   function clearFilters() {
-    setFilterFieldId(null);
-    setFilterProjectId(null);
-    setSortBy("relevance");
-    setPage(1);
+    navigateSearchPage(currentQuery, null, null, "relevance", 1);
   }
 
   const openDocument = useCallback(async (result: SearchResultItem, targetPage?: number | null) => {
@@ -504,13 +520,23 @@ export function SearchResultsPage({
 
                 {pagination && pagination.total_pages > 1 && (
                   <div className="flex items-center justify-center gap-2 pt-6">
-                    <Button variant="outline" size="sm" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={pagination.page <= 1}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigateSearchPage(currentQuery, filterFieldId, filterProjectId, sortBy, Math.max(1, pagination.page - 1))}
+                      disabled={pagination.page <= 1}
+                    >
                       Sebelumnya
                     </Button>
                     <span className="text-xs font-semibold text-slate-500 px-3">
                       Halaman {pagination.page} dari {pagination.total_pages}
                     </span>
-                    <Button variant="outline" size="sm" onClick={() => setPage((value) => value + 1)} disabled={pagination.page >= pagination.total_pages}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigateSearchPage(currentQuery, filterFieldId, filterProjectId, sortBy, pagination.page + 1)}
+                      disabled={pagination.page >= pagination.total_pages}
+                    >
                       Berikutnya
                     </Button>
                   </div>
